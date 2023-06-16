@@ -4,11 +4,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
-	"log"
 	"reflect"
 	"strings"
 	"unsafe"
+
+	"github.com/google/uuid"
 )
 
 type DataSet struct {
@@ -37,7 +37,7 @@ func NewDataSet(db *Conn) *DataSet {
 	return ds
 }
 
-func (ds *DataSet) Open(){
+func (ds *DataSet) Open() error {
 	ds.Rows = nil
 	ds.Index = 0
 	ds.Recno = 0
@@ -45,7 +45,7 @@ func (ds *DataSet) Open(){
 	rows, err := ds.Connection.DB.Query(ds.GetSql(), ds.GetParams()...)
 
 	if err != nil {
-		log.Printf("could not open dataset %v\n",err)
+		return err
 	}
 
 	col, _ := rows.Columns()
@@ -56,6 +56,12 @@ func (ds *DataSet) Open(){
 	ds.Scan(rows)
 
 	ds.First()
+	return nil
+}
+
+func (ds *DataSet) Close() {
+	ds.Rows = nil
+	ds.Param = nil
 }
 
 func (ds *DataSet) Exec() error {
@@ -195,7 +201,7 @@ func (ds *DataSet) First() {
 }
 
 func (ds *DataSet) Next() {
-	if !ds.Eof(){
+	if !ds.Eof() {
 		ds.Index++
 		ds.Recno++
 	}
@@ -238,10 +244,10 @@ func (ds *DataSet) ToStruct(model any) error {
 
 func (ds *DataSet) ToStructUniqResult(model any) error {
 	modelType := reflect.TypeOf(model)
-	modelValue:= reflect.ValueOf(model)
+	modelValue := reflect.ValueOf(model)
 
 	if modelType.Kind() == reflect.Pointer {
-		modelType  = reflect.TypeOf(model).Elem()
+		modelType = reflect.TypeOf(model).Elem()
 		modelValue = reflect.ValueOf(model).Elem()
 	}
 
@@ -280,7 +286,7 @@ func (ds *DataSet) ToStructList(model any) error {
 
 		if modelType.Kind() == reflect.Ptr {
 			newModel = reflect.New(modelType.Elem()).Elem()
-		}else{
+		} else {
 			newModel = reflect.New(modelType)
 		}
 
@@ -293,5 +299,3 @@ func (ds *DataSet) ToStructList(model any) error {
 
 	return nil
 }
-
-
