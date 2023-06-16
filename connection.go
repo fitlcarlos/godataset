@@ -4,16 +4,18 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
-	_ "github.com/sijms/go-ora/v2"
 	"log"
 	"time"
+
+	_ "github.com/lib/pq"
+	_ "github.com/sijms/go-ora/v2"
 )
 
 type Conn struct {
-	DB     *sql.DB
-	tx     *sql.Tx
+	DB *sql.DB
+	tx *sql.Tx
 }
+
 func NewConnection(dialect, dsn string) (*Conn, error) {
 	conn := &Conn{}
 	db, err := sql.Open(dialect, dsn)
@@ -22,7 +24,7 @@ func NewConnection(dialect, dsn string) (*Conn, error) {
 		return nil, fmt.Errorf("could not create a connection: %w", err)
 	}
 
-	db.SetConnMaxLifetime(time.Minute * 3)
+	//db.SetConnMaxLifetime(time.Minute * 3)
 
 	if err = db.Ping(); err != nil {
 		return nil, fmt.Errorf("database is not reachable: %w", err)
