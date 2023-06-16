@@ -1,7 +1,7 @@
 package godata
 
-type Parameter struct {
+type Param struct {
 	Value any
 }
 
-type Params map[string]Parameter
+type Params map[string]Param

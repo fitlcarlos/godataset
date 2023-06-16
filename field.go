@@ -32,6 +32,18 @@ func (field Field) AsInt() int {
 	return field.Value.AsInt()
 }
 
+func (field Field) AsInt8() int8 {
+	return field.Value.AsInt8()
+}
+
+func (field Field) AsInt16() int16 {
+	return field.Value.AsInt16()
+}
+
+func (field Field) AsInt32() int32 {
+	return field.Value.AsInt32()
+}
+
 func (field Field) AsInt64() int64 {
 	return field.Value.AsInt64()
 }

@@ -15,7 +15,7 @@ type DataSet struct {
 	Sql              Strings
 	Columns          []string
 	Rows             Fields
-	Param            Params
+	Params           Params
 	Index            int
 	Recno            int
 	DetailFields     string
@@ -30,7 +30,7 @@ func NewDataSet(db *Conn) *DataSet {
 		Connection: db,
 		Index:      0,
 		Recno:      0,
-		Param:      make(Params),
+		Params:     make(Params),
 	}
 
 	return ds
@@ -62,7 +62,7 @@ func (ds *DataSet) Open() error {
 func (ds *DataSet) Close() {
 	ds.Columns = nil
 	ds.Rows    = nil
-	ds.Param   = nil
+	ds.Params  = nil
 	ds.Index = 0
 	ds.Recno = 0
 	ds.DetailFields = ""
@@ -72,25 +72,8 @@ func (ds *DataSet) Close() {
 	ds.IndexFieldNames = ""
 }
 
-func (ds *DataSet) Exec() error {
-
-	result, err := ds.Connection.DB.Exec(ds.GetSql(), ds.GetParams()...)
-
-	if err != nil {
-		return err
-	}
-
-	affected, err := result.RowsAffected()
-
-	if err != nil {
-		return err
-	}
-
-	if affected == 0 {
-		return fmt.Errorf("error to execute query: %w", err)
-	}
-
-	return nil
+func (ds *DataSet) Exec() (sql.Result, error) {
+	return ds.Connection.DB.Exec(ds.GetSql(), ds.GetParams()...)
 }
 
 func (ds *DataSet) GetSql() (sql string) {
@@ -111,7 +94,7 @@ func (ds *DataSet) GetSql() (sql string) {
 				sqlWhereMasterDetail = sqlWhereMasterDetail + df[i] + " = :" + alias + " and "
 			}
 
-			ds.ParamByName(alias, ds.MasterSouce.FieldByName(mf[i]).Value)
+			ds.SetParam(alias, ds.MasterSouce.FieldByName(mf[i]).Value)
 		}
 
 		if sqlWhereMasterDetail != "" {
@@ -124,7 +107,7 @@ func (ds *DataSet) GetSql() (sql string) {
 
 func (ds *DataSet) GetParams() []any {
 	var param []any
-	for _, prm := range ds.Param {
+	for _, prm := range ds.Params {
 		param = append(param, prm.Value)
 	}
 	return param
@@ -167,9 +150,13 @@ func (ds *DataSet) Scan(list *sql.Rows) {
 	}
 }
 
-func (ds *DataSet) ParamByName(paramName string, paramValue any) *DataSet {
+func (ds *DataSet) ParamByName(paramName string) Param {
+	return ds.Params[paramName]
+}
 
-	ds.Param[paramName] = Parameter{Value: paramValue}
+func (ds *DataSet) SetParam(paramName string, paramValue any) *DataSet {
+
+	ds.Params[paramName] = Param{Value: paramValue}
 
 	return ds
 }
@@ -177,7 +164,11 @@ func (ds *DataSet) ParamByName(paramName string, paramValue any) *DataSet {
 func (ds *DataSet) FieldByName(fieldName string) Field {
 	fieldName = strings.ToUpper(fieldName)
 
-	return ds.Rows[ds.Index][fieldName]
+	if len(ds.Rows) > 0{
+		return ds.Rows[ds.Index][fieldName]
+	}else{
+		return Field{}
+	}
 }
 
 func (ds *DataSet) Locate(key string, value any) bool {
@@ -241,16 +232,16 @@ func (ds *DataSet) ToStruct(model any) error {
 
 	switch reflect.TypeOf(model).Elem().Kind() {
 	case reflect.Struct:
-		ds.ToStructUniqResult(model)
+		ds.toStructUniqResult(model)
 	case reflect.Slice, reflect.Array:
-		ds.ToStructList(model)
+		ds.toStructList(model)
 	default:
 		return errors.New("The interface is not a slice, array or struct")
 	}
 	return nil
 }
 
-func (ds *DataSet) ToStructUniqResult(model any) error {
+func (ds *DataSet) toStructUniqResult(model any) error {
 	modelType := reflect.TypeOf(model)
 	modelValue:= reflect.ValueOf(model)
 
@@ -261,6 +252,11 @@ func (ds *DataSet) ToStructUniqResult(model any) error {
 
 	for i := 0; i < modelType.NumField(); i++ {
 		field := modelType.Field(i)
+		fieldName := field.Tag.Get("column")
+
+		if fieldName == "" {
+			fieldName = field.Name
+		}
 
 		if field.Anonymous {
 			continue
@@ -270,11 +266,26 @@ func (ds *DataSet) ToStructUniqResult(model any) error {
 		fieldType := reflect.New(field.Type).Elem().Type()
 
 		switch fieldValue.(type) {
+		case int:
+			val := ds.FieldByName(fieldName).AsInt()
+			fieldValue = reflect.ValueOf(val).Convert(fieldType).Interface()
+		case int8:
+			val := ds.FieldByName(fieldName).AsInt8()
+			fieldValue = reflect.ValueOf(val).Convert(fieldType).Interface()
+		case int16:
+			val := ds.FieldByName(fieldName).AsInt16()
+			fieldValue = reflect.ValueOf(val).Convert(fieldType).Interface()
+		case int32:
+			val := ds.FieldByName(fieldName).AsInt32()
+			fieldValue = reflect.ValueOf(val).Convert(fieldType).Interface()
+		case int64:
+			val := ds.FieldByName(fieldName).AsInt64()
+			fieldValue = reflect.ValueOf(val).Convert(fieldType).Interface()
 		case float32, float64:
-			val := ds.FieldByName(field.Name).AsFloat64()
+			val := ds.FieldByName(fieldName).AsFloat64()
 			fieldValue = reflect.ValueOf(val).Convert(fieldType).Interface()
 		default:
-			fieldValue = ds.FieldByName(field.Name).AsValue()
+			fieldValue = ds.FieldByName(fieldName).AsValue()
 		}
 
 		rf := modelValue.Field(i)
@@ -285,7 +296,7 @@ func (ds *DataSet) ToStructUniqResult(model any) error {
 	return nil
 }
 
-func (ds *DataSet) ToStructList(model any) error {
+func (ds *DataSet) toStructList(model any) error {
 	modelType := reflect.TypeOf(model).Elem().Elem()
 	modelValue := reflect.ValueOf(model).Elem()
 
@@ -298,7 +309,7 @@ func (ds *DataSet) ToStructList(model any) error {
 			newModel = reflect.New(modelType)
 		}
 
-		ds.ToStructUniqResult(newModel.Interface())
+		ds.toStructUniqResult(newModel.Interface())
 
 		modelValue.Set(reflect.Append(modelValue, newModel.Elem()))
 

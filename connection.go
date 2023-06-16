@@ -15,6 +15,7 @@ type Conn struct {
 	tx     *sql.Tx
 	Dialect DialectType
 	DSN     string
+	maxLifetime time.Duration
 }
 func NewConnection(dialect DialectType, dsn string) (*Conn, error) {
 	conn := &Conn{
@@ -28,14 +29,24 @@ func NewConnection(dialect DialectType, dsn string) (*Conn, error) {
 		return nil, fmt.Errorf("could not create a connection: %w", err)
 	}
 
-	db.SetConnMaxLifetime(time.Minute * 3)
-
 	if err = db.Ping(); err != nil {
 		return nil, fmt.Errorf("database is not reachable: %w", err)
 	}
 
 	conn.DB = db
 	return conn, nil
+}
+
+func (co *Conn) SetConnMaxLifeTime(d time.Duration) {
+	co.maxLifetime = d
+	co.DB.SetConnMaxLifetime(d)
+}
+
+func (co *Conn) Ping() error {
+	if err := co.DB.Ping(); err != nil {
+		return fmt.Errorf("database is not reachable: %w", err)
+	}
+	return nil
 }
 
 func (co *Conn) CreateContext(ctx context.Context) (context.Context, context.CancelFunc) {
