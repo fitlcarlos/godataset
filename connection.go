@@ -13,10 +13,16 @@ import (
 type Conn struct {
 	DB     *sql.DB
 	tx     *sql.Tx
+	Dialect DialectType
+	DSN     string
 }
-func NewConnection(dialect, dsn string) (*Conn, error) {
-	conn := &Conn{}
-	db, err := sql.Open(dialect, dsn)
+func NewConnection(dialect DialectType, dsn string) (*Conn, error) {
+	conn := &Conn{
+		Dialect: dialect,
+		DSN: dsn,
+	}
+
+	db, err := sql.Open(dialect.String(), dsn)
 
 	if err != nil {
 		return nil, fmt.Errorf("could not create a connection: %w", err)

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
-	"log"
 	"reflect"
 	"strings"
 	"unsafe"
@@ -37,7 +36,7 @@ func NewDataSet(db *Conn) *DataSet {
 	return ds
 }
 
-func (ds *DataSet) Open(){
+func (ds *DataSet) Open() error {
 	ds.Rows = nil
 	ds.Index = 0
 	ds.Recno = 0
@@ -45,7 +44,7 @@ func (ds *DataSet) Open(){
 	rows, err := ds.Connection.DB.Query(ds.GetSql(), ds.GetParams()...)
 
 	if err != nil {
-		log.Printf("could not open dataset %v\n",err)
+		return fmt.Errorf("could not open dataset %v\n",err)
 	}
 
 	col, _ := rows.Columns()
@@ -56,6 +55,21 @@ func (ds *DataSet) Open(){
 	ds.Scan(rows)
 
 	ds.First()
+
+	return nil
+}
+
+func (ds *DataSet) Close() {
+	ds.Columns = nil
+	ds.Rows    = nil
+	ds.Param   = nil
+	ds.Index = 0
+	ds.Recno = 0
+	ds.DetailFields = ""
+	ds.MasterSouce = nil
+	ds.MasterFields = ""
+	ds.MasterDetailList = nil
+	ds.IndexFieldNames = ""
 }
 
 func (ds *DataSet) Exec() error {
@@ -293,5 +307,4 @@ func (ds *DataSet) ToStructList(model any) error {
 
 	return nil
 }
-
 

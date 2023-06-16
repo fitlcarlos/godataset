@@ -1,9 +1,11 @@
 package godata
 
-type DialectType int
+import "fmt"
+
+type DialectType uint8
 
 const (
-	FIREBIRD int = 1
+	FIREBIRD DialectType = 1
 	INTERBASE    = 2
 	MYSQL        = 3
 	ORACLE       = 4
@@ -11,3 +13,24 @@ const (
 	SQLSERVER    = 6
 	SQLITE       = 7
 )
+
+func (d DialectType) String() string{
+	switch d {
+	case FIREBIRD:
+		return "firebird"
+	case INTERBASE:
+		return "interbase"
+	case MYSQL:
+		return "mysql"
+	case ORACLE:
+		return "oracle"
+	case POSTGRESQL:
+		return "postgresql"
+	case SQLSERVER:
+		return "sqlserver"
+	case SQLITE:
+		return "sqlite"
+	default:
+		return fmt.Sprintf("%d", int(d))
+	}
+}
