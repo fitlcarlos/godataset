@@ -41,7 +41,7 @@ func (v variant) AsString() string {
 func (v variant) AsInt() int {
 	switch val := v.Value.(type) {
 	case nil:
-		return 0
+		return int(0)
 	case int:
 		return v.Value.(int)
 	case int8:
@@ -52,12 +52,106 @@ func (v variant) AsInt() int {
 		return int(v.Value.(int32))
 	case int64:
 		return int(v.Value.(int64))
+	case string:
+		intValue, err := strconv.Atoi(val)
+		if err != nil {
+			t := reflect.TypeOf(val)
+			log.Printf("unable to convert data type to int, type: %v", t)
+			return int(0)
+		}
+		return intValue
 	default:
 		t := reflect.TypeOf(val)
 		log.Printf("unable to convert data type to int, type: %v", t)
-		return 0
+		return int(0)
 	}
+}
 
+func (v variant) AsInt8() int8 {
+	switch val := v.Value.(type) {
+	case nil:
+		return int8(0)
+	case int:
+		return int8(v.Value.(int))
+	case int8:
+		return v.Value.(int8)
+	case int16:
+		return int8(v.Value.(int16))
+	case int32:
+		return int8(v.Value.(int32))
+	case int64:
+		return int8(v.Value.(int64))
+	case string:
+		int8Value, err := strconv.ParseInt(val,10,8)
+		if err != nil {
+			t := reflect.TypeOf(val)
+			log.Printf("unable to convert data type to int8, type: %v", t)
+			return int8(0)
+		}
+		return int8(int8Value)
+	default:
+		t := reflect.TypeOf(val)
+		log.Printf("unable to convert data type to int8, type: %v", t)
+		return int8(0)
+	}
+}
+
+func (v variant) AsInt16() int16 {
+	switch val := v.Value.(type) {
+	case nil:
+		return int16(0)
+	case int:
+		return int16(v.Value.(int))
+	case int8:
+		return int16(v.Value.(int8))
+	case int16:
+		return v.Value.(int16)
+	case int32:
+		return int16(v.Value.(int32))
+	case int64:
+		return int16(v.Value.(int64))
+	case string:
+		int16Value, err := strconv.ParseInt(val,10,16)
+		if err != nil {
+			t := reflect.TypeOf(val)
+			log.Printf("unable to convert data type to int16, type: %v", t)
+			return int16(0)
+		}
+		return int16(int16Value)
+	default:
+		t := reflect.TypeOf(val)
+		log.Printf("unable to convert data type to int16, type: %v", t)
+		return int16(0)
+	}
+}
+
+func (v variant) AsInt32() int32 {
+	switch val := v.Value.(type) {
+	case nil:
+		return int32(0)
+	case int:
+		return int32(v.Value.(int))
+	case int8:
+		return int32(v.Value.(int8))
+	case int16:
+		return int32(v.Value.(int16))
+	case int32:
+		return v.Value.(int32)
+	case int64:
+		return int32(v.Value.(int64))
+	case string:
+		int32Value, err := strconv.ParseInt(val,10,32)
+		if err != nil {
+			t := reflect.TypeOf(val)
+			log.Printf("unable to convert data type to int32, type: %v", t)
+			return int32(0)
+		}
+		return int32(int32Value)
+	default:
+		t := reflect.TypeOf(val)
+		log.Printf("unable to convert data type to int32, type: %v", t)
+		return int32(0)
+	}
 }
 
 func (v variant) AsInt64() int64 {
@@ -74,6 +168,14 @@ func (v variant) AsInt64() int64 {
 		return int64(v.Value.(int32))
 	case int64:
 		return v.Value.(int64)
+	case string:
+		int64Value, err := strconv.ParseInt(val,10,64)
+		if err != nil {
+			t := reflect.TypeOf(val)
+			log.Printf("unable to convert data type to int64, type: %v", t)
+			return int64(0)
+		}
+		return int64Value
 	default:
 		t := reflect.TypeOf(val)
 		log.Printf("unable to convert data type to int64, type: %v", t)
