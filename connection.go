@@ -11,30 +11,42 @@ import (
 )
 
 type Conn struct {
-	DB     *sql.DB
-	tx     *sql.Tx
-	Dialect DialectType
-	DSN     string
+	DB          *sql.DB
+	tx          *sql.Tx
+	Dialect     DialectType
+	DSN         string
 	maxLifetime time.Duration
 }
+
 func NewConnection(dialect DialectType, dsn string) (*Conn, error) {
 	conn := &Conn{
 		Dialect: dialect,
-		DSN: dsn,
+		DSN:     dsn,
 	}
 
-	db, err := sql.Open(dialect.String(), dsn)
+	err := conn.Open()
 
 	if err != nil {
-		return nil, fmt.Errorf("could not create a connection: %w", err)
+		return nil, err
+	}
+
+	return conn, nil
+}
+
+func (co *Conn) Open() error {
+	db, err := sql.Open(co.Dialect.String(), co.DSN)
+
+	if err != nil {
+		return fmt.Errorf("could not create a connection: %w", err)
 	}
 
 	if err = db.Ping(); err != nil {
-		return nil, fmt.Errorf("database is not reachable: %w", err)
+		return fmt.Errorf("database is not reachable: %w", err)
 	}
 
-	conn.DB = db
-	return conn, nil
+	co.DB = db
+
+	return nil
 }
 
 func (co *Conn) SetConnMaxLifeTime(d time.Duration) {

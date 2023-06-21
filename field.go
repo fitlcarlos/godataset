@@ -8,9 +8,9 @@ import (
 type Field struct {
 	Name       string
 	Caption    string
-	DataType *sql.ColumnType
-	Value    variant
-	DataMask string
+	DataType   *sql.ColumnType
+	Value      variant
+	DataMask   string
 	ValueTrue  string
 	ValueFalse string
 	Visible    bool

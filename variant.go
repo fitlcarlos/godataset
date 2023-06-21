@@ -1,12 +1,14 @@
 package godata
 
 import (
+	"fmt"
 	"log"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 )
+
 type variant struct {
 	Value any
 }
@@ -20,15 +22,17 @@ func (v variant) AsString() string {
 	case nil:
 		return ""
 	case time.Time:
-		layout := "02/01/2006 15:04:05"
-		formattedTime := val.Format(layout)
-		if strings.Contains(formattedTime, "00:00:00") {
-			formattedTime = formattedTime[:10]
-		}
-		return formattedTime
-	case int, int8, int16, int32, int64:
-		intValue := strconv.FormatInt(reflect.ValueOf(val).Int(),10)
-		return intValue
+		//layout := "02/01/2006 15:04:05"
+		//formattedTime := val.Format(layout)
+		//if strings.Contains(formattedTime, "00:00:00") {
+		//	formattedTime = formattedTime[:10]
+		//}
+		return val.String()
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		//intValue := strconv.FormatInt(reflect.ValueOf(val).Int(), 10)
+		return fmt.Sprintf("%v", val)
+	case float32, float64:
+		return fmt.Sprintf("%f", val)
 	case string:
 		return val
 	default:
@@ -82,7 +86,7 @@ func (v variant) AsInt8() int8 {
 	case int64:
 		return int8(v.Value.(int64))
 	case string:
-		int8Value, err := strconv.ParseInt(val,10,8)
+		int8Value, err := strconv.ParseInt(val, 10, 8)
 		if err != nil {
 			t := reflect.TypeOf(val)
 			log.Printf("unable to convert data type to int8, type: %v", t)
@@ -111,7 +115,7 @@ func (v variant) AsInt16() int16 {
 	case int64:
 		return int16(v.Value.(int64))
 	case string:
-		int16Value, err := strconv.ParseInt(val,10,16)
+		int16Value, err := strconv.ParseInt(val, 10, 16)
 		if err != nil {
 			t := reflect.TypeOf(val)
 			log.Printf("unable to convert data type to int16, type: %v", t)
@@ -140,7 +144,7 @@ func (v variant) AsInt32() int32 {
 	case int64:
 		return int32(v.Value.(int64))
 	case string:
-		int32Value, err := strconv.ParseInt(val,10,32)
+		int32Value, err := strconv.ParseInt(val, 10, 32)
 		if err != nil {
 			t := reflect.TypeOf(val)
 			log.Printf("unable to convert data type to int32, type: %v", t)
@@ -169,7 +173,7 @@ func (v variant) AsInt64() int64 {
 	case int64:
 		return v.Value.(int64)
 	case string:
-		int64Value, err := strconv.ParseInt(val,10,64)
+		int64Value, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {
 			t := reflect.TypeOf(val)
 			log.Printf("unable to convert data type to int64, type: %v", t)
@@ -271,4 +275,22 @@ func (v variant) AsDateTime() time.Time {
 	}
 }
 
+func IsPointer(value interface{}) bool {
+	t := reflect.TypeOf(value)
+	return t.Kind() == reflect.Ptr
+}
 
+func getScale(number float64) int {
+	str := fmt.Sprintf("%f", number)
+
+	// Dividir a string em partes inteira e decimal
+	parts := strings.Split(str, ".")
+
+	// Se houver uma parte decimal, retornar o número de dígitos na parte decimal
+	if len(parts) == 2 {
+		return len(parts[1])
+	}
+
+	// Caso contrário, o número não possui parte decimal (escala = 0)
+	return 0
+}
