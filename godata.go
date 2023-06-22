@@ -428,7 +428,11 @@ func JoinSlice(list any) string {
 	valueOf := reflect.ValueOf(list)
 	value := make([]string, valueOf.Len())
 	for i := 0; i < valueOf.Len(); i++ {
-		value[i] = fmt.Sprintf("%v", valueOf.Index(i).Interface())
+		if valueOf.Index(i).Type().Kind() == reflect.String {
+			value[i] = "'" + fmt.Sprintf("%v", valueOf.Index(i).Interface()) + "'"
+		} else {
+			value[i] = fmt.Sprintf("%v", valueOf.Index(i).Interface())
+		}
 	}
 	return strings.Join(value, ", ")
 }

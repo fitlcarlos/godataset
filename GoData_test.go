@@ -58,14 +58,16 @@ func TestDataSetToStruct(t *testing.T) {
 
 	ds := NewDataSet(db)
 	err = ds.
-		AddSql("select &total &from_table").
+		AddSql("select &total, quem_abriu &from_table").
 		AddSql("where cod_empresa between :cod_empresa_ini and :cod_empresa_fim").
 		AddSql("and numero_os in (&numero_os)").
+		AddSql("and quem_abriu in (&quem_abriu)").
 		SetInputParam("cod_empresa_ini", 2).
 		SetInputParam("cod_empresa_fim", 33).
 		SetMacro("total", "valor_itens_bruto").
 		SetMacro("from_table", "from os ").
 		SetMacro("numero_os", []int64{2, 100, 23420, 23422}).
+		SetMacro("quem_abriu", []string{"LETICIAS", "LEONARDO"}).
 		Open()
 
 	if err != nil {
