@@ -92,6 +92,7 @@ func (ds *DataSet) Open() error {
 }
 
 func (ds *DataSet) Close() {
+	ds.Sql.Clear()
 	ds.Columns = nil
 	ds.Rows = nil
 	ds.Params = nil
