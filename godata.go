@@ -199,18 +199,12 @@ func (ds *DataSet) Scan(list *sql.Rows) {
 		row := make(map[string]Field)
 
 		for i, value := range columns {
-			row[fields[i]] = Field{
-				Name:       fields[i],
-				Caption:    fields[i],
-				DataType:   columntypes[i],
-				Value:      variant{Value: value},
-				DataMask:   "",
-				ValueTrue:  "",
-				ValueFalse: "",
-				Visible:    true,
-				Order:      i + 1,
-				Index:      i,
-			}
+			field := NewField(fields[i], columntypes[i])
+			field.Value.Value = value
+			field.Order = i + 1
+			field.Index = i
+
+			row[fields[i]] = field
 		}
 
 		ds.Rows = append(ds.Rows, row)

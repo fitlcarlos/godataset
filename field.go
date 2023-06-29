@@ -14,11 +14,32 @@ type Field struct {
 	ValueTrue  string
 	ValueFalse string
 	Visible    bool
+	AcceptNull bool
+	StrNull    string
 	Order      int
 	Index      int
 }
 
 type Fields []map[string]Field
+
+func NewField(name string, dataType *sql.ColumnType) Field {
+	field := Field{
+		Name:       name,
+		Caption:    name,
+		DataType:   dataType,
+		Value:      variant{},
+		DataMask:   "",
+		ValueTrue:  "",
+		ValueFalse: "",
+		Visible:    true,
+		AcceptNull: true,
+		StrNull:    "null",
+		Order:      1,
+		Index:      0,
+	}
+
+	return field
+}
 
 func (field Field) AsValue() any {
 	return field.Value.AsValue()
