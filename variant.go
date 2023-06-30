@@ -18,28 +18,25 @@ func (v variant) AsValue() any {
 }
 
 func (v variant) AsString() string {
+	value := ""
 	switch val := v.Value.(type) {
 	case nil:
-		return ""
+		value = ""
 	case time.Time:
-		//layout := "02/01/2006 15:04:05"
-		//formattedTime := val.Format(layout)
-		//if strings.Contains(formattedTime, "00:00:00") {
-		//	formattedTime = formattedTime[:10]
-		//}
-		return val.String()
+		value = val.String()
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		//intValue := strconv.FormatInt(reflect.ValueOf(val).Int(), 10)
-		return fmt.Sprintf("%v", val)
+		value = fmt.Sprintf("%v", val)
 	case float32, float64:
-		return fmt.Sprintf("%f", val)
+		value = fmt.Sprintf("%f", val)
 	case string:
-		return val
+		value = val
 	default:
 		t := reflect.TypeOf(v.Value)
 		log.Printf("unable to convert data type to string. Type: %v", t)
-		return ""
+		value = ""
 	}
+	value = strings.Replace(value, "\r", "\n", -1)
+	return value
 }
 
 func (v variant) AsInt() int {
@@ -163,15 +160,15 @@ func (v variant) AsInt64() int64 {
 	case nil:
 		return int64(0)
 	case int:
-		return int64(v.Value.(int))
+		return int64(val)
 	case int8:
-		return int64(v.Value.(int8))
+		return int64(val)
 	case int16:
-		return int64(v.Value.(int16))
+		return int64(val)
 	case int32:
-		return int64(v.Value.(int32))
+		return int64(val)
 	case int64:
-		return v.Value.(int64)
+		return val
 	case string:
 		int64Value, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {
@@ -273,6 +270,21 @@ func (v variant) AsDateTime() time.Time {
 		data, _ := time.Parse(time.DateTime, time.DateTime)
 		return data
 	}
+}
+
+func (v variant) IsNull() bool {
+	switch val := v.Value.(type) {
+	case nil:
+		return true
+	case string:
+		return val == ""
+	default:
+		return false
+	}
+}
+
+func (v variant) IsNotNull() bool {
+	return !v.IsNull()
 }
 
 func IsPointer(value interface{}) bool {

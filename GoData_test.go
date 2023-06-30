@@ -145,3 +145,30 @@ func TestDataSetToSInsert(t *testing.T) {
 		SetInputParam("ID_CODIGO_TESTE", 100).
 		Exec()
 }
+
+func TestDataSetToSInsertReturn(t *testing.T) {
+
+	connectStr := "oracle://nbsama:new@100.0.65.224:1521/fab"
+
+	db, err := NewConnectionOracle(connectStr)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer db.Close()
+
+	ds := NewDataSet(db)
+
+	_, err = ds.
+		AddSql("INSERT INTO TESTE (ID_CODIGO_TESTE, DESCRICAO) VALUES (:ID_CODIGO_TESTE, :DESCRICAO)").
+		AddSql("RETURNING ID_CODIGO_TESTE, DESCRICAO INTO :OUT_ID_CODIGO_TESTE, :OUT_DESCRICAO").
+		SetInputParam("ID_CODIGO_TESTE", 131).
+		SetInputParam("DESCRICAO", "INSERT TEST").
+		SetOutputParam("OUT_ID_CODIGO_TESTE", int64(0)).
+		SetOutputParam("OUT_DESCRICAO", "").
+		Exec()
+
+	fmt.Println("ID:", ds.ParamByName("OUT_ID_CODIGO_TESTE").AsInt64())
+	fmt.Println("Descrição", ds.ParamByName("OUT_DESCRICAO").AsString())
+}

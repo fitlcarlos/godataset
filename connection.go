@@ -16,6 +16,7 @@ type Conn struct {
 	Dialect     DialectType
 	DSN         string
 	maxLifetime time.Duration
+	log         bool
 }
 
 func NewConnection(dialect DialectType, dsn string) (*Conn, error) {
@@ -31,6 +32,42 @@ func NewConnection(dialect DialectType, dsn string) (*Conn, error) {
 	}
 
 	return conn, nil
+}
+
+func NewConnectionOracle(dsn string) (*Conn, error) {
+	return NewConnection(ORACLE, dsn)
+}
+
+func NewConnectionPostgres(dsn string) (*Conn, error) {
+	return NewConnection(POSTGRESQL, dsn)
+}
+
+func NewConnectionFirebird(dsn string) (*Conn, error) {
+	return NewConnection(FIREBIRD, dsn)
+}
+
+func NewConnectionInterbase(dsn string) (*Conn, error) {
+	return NewConnection(INTERBASE, dsn)
+}
+
+func NewConnectionMySql(dsn string) (*Conn, error) {
+	return NewConnection(MYSQL, dsn)
+}
+
+func NewConnectionSqLite(dsn string) (*Conn, error) {
+	return NewConnection(SQLITE, dsn)
+}
+
+func NewConnectionSqlServer(dsn string) (*Conn, error) {
+	return NewConnection(SQLSERVER, dsn)
+}
+
+func (co *Conn) EnableLog() {
+	co.log = true
+}
+
+func (co *Conn) DisableLog() {
+	co.log = false
 }
 
 func (co *Conn) Open() error {

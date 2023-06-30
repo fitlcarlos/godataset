@@ -5,23 +5,26 @@ import (
 	"time"
 )
 
-type Input int
+type ParamType int
 
 const (
-	IN    Input = 0
-	OUT   Input = 1
-	INOUT Input = 2
+	IN    ParamType = 0
+	OUT   ParamType = 1
+	INOUT ParamType = 2
 )
 
 type Value interface{ *variant | variant }
 type Param struct {
-	Value    variant
-	Input    Input
-	DataType reflect.Type
+	Value     variant
+	ParamType ParamType
+	DataType  reflect.Type
 }
 
-type Params map[string]Param
-
+func NewParam(paramType ParamType) Param {
+	return Param{
+		ParamType: paramType,
+	}
+}
 func (param Param) AsValue() variant {
 	if IsPointer(param.Value.Value) {
 		a := reflect.ValueOf(param.Value.Value).Elem().Interface()
@@ -32,41 +35,41 @@ func (param Param) AsValue() variant {
 }
 
 func (param Param) AsString() string {
-	return param.Value.AsString()
+	return param.AsValue().AsString()
 }
 
 func (param Param) AsInt() int {
-	return param.Value.AsInt()
+	return param.AsValue().AsInt()
 }
 
 func (param Param) AsInt8() int8 {
-	return param.Value.AsInt8()
+	return param.AsValue().AsInt8()
 }
 
 func (param Param) AsInt16() int16 {
-	return param.Value.AsInt16()
+	return param.AsValue().AsInt16()
 }
 
 func (param Param) AsInt32() int32 {
-	return param.Value.AsInt32()
+	return param.AsValue().AsInt32()
 }
 
 func (param Param) AsInt64() int64 {
-	return param.Value.AsInt64()
+	return param.AsValue().AsInt64()
 }
 
 func (param Param) AsFloat() float32 {
-	return param.Value.AsFloat()
+	return param.AsValue().AsFloat()
 }
 
 func (param Param) AsFloat64() float64 {
-	return param.Value.AsFloat64()
+	return param.AsValue().AsFloat64()
 }
 
 func (param Param) AsBool() bool {
-	return param.Value.AsBool()
+	return param.AsValue().AsBool()
 }
 
 func (param Param) AsDateTime() time.Time {
-	return param.Value.AsDateTime()
+	return param.AsValue().AsDateTime()
 }

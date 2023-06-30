@@ -84,3 +84,11 @@ func (field Field) AsBool() bool {
 func (field Field) AsDateTime() time.Time {
 	return field.Value.AsDateTime()
 }
+
+func (field Field) IsNull() bool {
+	return field.Value.IsNull()
+}
+
+func (field Field) IsNotNull() bool {
+	return field.Value.IsNull()
+}
