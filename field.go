@@ -11,8 +11,9 @@ type Field struct {
 	DataType   *sql.ColumnType
 	Value      variant
 	DataMask   string
-	ValueTrue  string
-	ValueFalse string
+	BoolValue  bool
+	TrueValue  string
+	FalseValue string
 	Visible    bool
 	AcceptNull bool
 	StrNull    string
@@ -29,8 +30,9 @@ func NewField(name string, dataType *sql.ColumnType) Field {
 		DataType:   dataType,
 		Value:      variant{},
 		DataMask:   "",
-		ValueTrue:  "",
-		ValueFalse: "",
+		BoolValue:  false,
+		TrueValue:  "",
+		FalseValue: "",
 		Visible:    true,
 		AcceptNull: true,
 		StrNull:    "null",

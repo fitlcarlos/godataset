@@ -163,7 +163,7 @@ func TestDataSetToSInsertReturn(t *testing.T) {
 	_, err = ds.
 		AddSql("INSERT INTO TESTE (ID_CODIGO_TESTE, DESCRICAO) VALUES (:ID_CODIGO_TESTE, :DESCRICAO)").
 		AddSql("RETURNING ID_CODIGO_TESTE, DESCRICAO INTO :OUT_ID_CODIGO_TESTE, :OUT_DESCRICAO").
-		SetInputParam("ID_CODIGO_TESTE", 131).
+		SetInputParam("ID_CODIGO_TESTE", 132).
 		SetInputParam("DESCRICAO", "INSERT TEST").
 		SetOutputParam("OUT_ID_CODIGO_TESTE", int64(0)).
 		SetOutputParam("OUT_DESCRICAO", "").
