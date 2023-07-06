@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"github.com/google/uuid"
-	"log"
 	"reflect"
 	"strings"
 	"unsafe"
@@ -74,7 +73,7 @@ func (ds *DataSet) Open() error {
 	sql := ds.GetSql()
 
 	if ds.Connection.log {
-		log.Println(sql)
+		fmt.Println(sql)
 		ds.PrintParam()
 	}
 
@@ -120,7 +119,7 @@ func (ds *DataSet) Exec() (sql.Result, error) {
 	sql := ds.GetSql()
 
 	if ds.Connection.log {
-		log.Println(sql)
+		fmt.Println(sql)
 		ds.PrintParam()
 	}
 

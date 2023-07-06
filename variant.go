@@ -2,7 +2,6 @@ package godata
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -32,7 +31,7 @@ func (v variant) AsString() string {
 		value = val
 	default:
 		t := reflect.TypeOf(v.Value)
-		log.Printf("unable to convert data type to string. Type: %v", t)
+		fmt.Printf("unable to convert data type to string. Type: %v", t)
 		value = ""
 	}
 	value = strings.Replace(value, "\r", "\n", -1)
@@ -57,13 +56,13 @@ func (v variant) AsInt() int {
 		intValue, err := strconv.Atoi(val)
 		if err != nil {
 			t := reflect.TypeOf(val)
-			log.Printf("unable to convert data type to int, type: %v", t)
+			fmt.Printf("unable to convert data type to int, type: %v", t)
 			return int(0)
 		}
 		return intValue
 	default:
 		t := reflect.TypeOf(val)
-		log.Printf("unable to convert data type to int, type: %v", t)
+		fmt.Printf("unable to convert data type to int, type: %v", t)
 		return int(0)
 	}
 }
@@ -86,13 +85,13 @@ func (v variant) AsInt8() int8 {
 		int8Value, err := strconv.ParseInt(val, 10, 8)
 		if err != nil {
 			t := reflect.TypeOf(val)
-			log.Printf("unable to convert data type to int8, type: %v", t)
+			fmt.Printf("unable to convert data type to int8, type: %v", t)
 			return int8(0)
 		}
 		return int8(int8Value)
 	default:
 		t := reflect.TypeOf(val)
-		log.Printf("unable to convert data type to int8, type: %v", t)
+		fmt.Printf("unable to convert data type to int8, type: %v", t)
 		return int8(0)
 	}
 }
@@ -115,13 +114,13 @@ func (v variant) AsInt16() int16 {
 		int16Value, err := strconv.ParseInt(val, 10, 16)
 		if err != nil {
 			t := reflect.TypeOf(val)
-			log.Printf("unable to convert data type to int16, type: %v", t)
+			fmt.Printf("unable to convert data type to int16, type: %v", t)
 			return int16(0)
 		}
 		return int16(int16Value)
 	default:
 		t := reflect.TypeOf(val)
-		log.Printf("unable to convert data type to int16, type: %v", t)
+		fmt.Printf("unable to convert data type to int16, type: %v", t)
 		return int16(0)
 	}
 }
@@ -144,13 +143,13 @@ func (v variant) AsInt32() int32 {
 		int32Value, err := strconv.ParseInt(val, 10, 32)
 		if err != nil {
 			t := reflect.TypeOf(val)
-			log.Printf("unable to convert data type to int32, type: %v", t)
+			fmt.Printf("unable to convert data type to int32, type: %v", t)
 			return int32(0)
 		}
 		return int32(int32Value)
 	default:
 		t := reflect.TypeOf(val)
-		log.Printf("unable to convert data type to int32, type: %v", t)
+		fmt.Printf("unable to convert data type to int32, type: %v", t)
 		return int32(0)
 	}
 }
@@ -173,13 +172,13 @@ func (v variant) AsInt64() int64 {
 		int64Value, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {
 			t := reflect.TypeOf(val)
-			log.Printf("unable to convert data type to int64, type: %v", t)
+			fmt.Printf("unable to convert data type to int64, type: %v", t)
 			return int64(0)
 		}
 		return int64Value
 	default:
 		t := reflect.TypeOf(val)
-		log.Printf("unable to convert data type to int64, type: %v", t)
+		fmt.Printf("unable to convert data type to int64, type: %v", t)
 		return int64(0)
 	}
 }
@@ -196,13 +195,13 @@ func (v variant) AsFloat() float32 {
 		floatValue, err := strconv.ParseFloat(val, 32)
 		if err != nil {
 			t := reflect.TypeOf(val)
-			log.Printf("unable to convert data type to float32, type: %v", t)
+			fmt.Printf("unable to convert data type to float32, type: %v", t)
 			return float32(0)
 		}
 		return float32(floatValue)
 	default:
 		t := reflect.TypeOf(val)
-		log.Printf("unable to convert data type to float32, type: %v", t)
+		fmt.Printf("unable to convert data type to float32, type: %v", t)
 		return float32(0)
 	}
 }
@@ -219,13 +218,13 @@ func (v variant) AsFloat64() float64 {
 		floatValue, err := strconv.ParseFloat(val, 64)
 		if err != nil {
 			t := reflect.TypeOf(val)
-			log.Printf("unable to convert data type to float64, type: %v", t)
+			fmt.Printf("unable to convert data type to float64, type: %v", t)
 			return float64(0)
 		}
 		return floatValue
 	default:
 		t := reflect.TypeOf(val)
-		log.Printf("unable to convert data type to float64, type: %v", t)
+		fmt.Printf("unable to convert data type to float64, type: %v", t)
 		return float64(0)
 	}
 }
@@ -253,7 +252,7 @@ func (v variant) AsBool() bool {
 		}
 	default:
 		t := reflect.TypeOf(val)
-		log.Printf("unable to convert data type to bool, type: %v", t)
+		fmt.Printf("unable to convert data type to bool, type: %v", t)
 		return false
 	}
 }
@@ -266,7 +265,7 @@ func (v variant) AsDateTime() time.Time {
 	case time.Time:
 		return v.Value.(time.Time)
 	default:
-		log.Printf("unable to convert data type to time.")
+		fmt.Printf("unable to convert data type to time.")
 		data, _ := time.Parse(time.DateTime, time.DateTime)
 		return data
 	}

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	_ "github.com/sijms/go-ora/v2"
-	"log"
 	"time"
 )
 
@@ -130,8 +129,8 @@ func (co *Conn) Exec(sql string, arg ...any) (sql.Result, error) {
 
 func (co *Conn) Close() {
 	if err := co.DB.Close(); err != nil {
-		log.Printf("could not close the database connection %v\n", err)
+		fmt.Printf("could not close the database connection %v\n", err)
 		return
 	}
-	log.Printf("database connection released succesfully")
+	fmt.Printf("database connection released succesfully")
 }
