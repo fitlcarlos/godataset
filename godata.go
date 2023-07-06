@@ -168,20 +168,25 @@ func (ds *DataSet) GetSql() (sql string) {
 		mf := strings.Split(ds.MasterFields, ";")
 		df := strings.Split(ds.DetailFields, ";")
 
-		for i := 0; i < len(mf); i++ {
-			aliasHash, _ := uuid.NewUUID()
-			alias := strings.Replace(aliasHash.String(), "-", "", -1)
-			if i == len(mf)-1 {
-				sqlWhereMasterDetail = sqlWhereMasterDetail + df[i] + " = :" + alias
-			} else {
-				sqlWhereMasterDetail = sqlWhereMasterDetail + df[i] + " = :" + alias + " and "
+		if ds.MasterFields != "" || ds.DetailFields != "" {
+			for i := 0; i < len(mf); i++ {
+
+				aliasHash, _ := uuid.NewUUID()
+				alias := strings.Replace(aliasHash.String(), "-", "", -1)
+				if i == len(mf)-1 {
+					sqlWhereMasterDetail = sqlWhereMasterDetail + df[i] + " = :" + alias
+				} else {
+					sqlWhereMasterDetail = sqlWhereMasterDetail + df[i] + " = :" + alias + " and "
+				}
+
+				ds.SetInputParam(alias, ds.MasterSouce.FieldByName(mf[i]).AsValue())
 			}
 
-			ds.SetInputParam(alias, ds.MasterSouce.FieldByName(mf[i]).AsValue())
-		}
-
-		if sqlWhereMasterDetail != "" {
-			sql = "select * from (" + sql + ") where " + sqlWhereMasterDetail
+			if sqlWhereMasterDetail != "" {
+				sql = "select * from (" + sql + ") where " + sqlWhereMasterDetail
+			}
+		} else {
+			fmt.Println("MasterFields or DetailFields field cannot be empty")
 		}
 	}
 
