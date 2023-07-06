@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"github.com/google/uuid"
 	"log"
 	"reflect"
@@ -37,8 +38,8 @@ type DS interface {
 type DataSet struct {
 	Connection       *Conn
 	Sql              Strings
-	Columns          []string
-	Rows             Fields
+	Fields           Fields
+	Rows             []Row
 	Params           *Params
 	Macros           Macros
 	Index            int
@@ -55,6 +56,7 @@ func NewDataSet(db *Conn) *DataSet {
 		Connection: db,
 		Index:      0,
 		Recno:      0,
+		Fields:     NewFields(),
 		Params:     NewParams(),
 		Macros:     make(Macros),
 	}
@@ -66,6 +68,8 @@ func (ds *DataSet) Open() error {
 	ds.Rows = nil
 	ds.Index = 0
 	ds.Recno = 0
+
+	ds.CreateFields()
 
 	sql := ds.GetSql()
 
@@ -88,12 +92,9 @@ func (ds *DataSet) Open() error {
 		}
 	}
 
-	col, _ := rows.Columns()
-	ds.Columns = col
-
 	defer rows.Close()
 
-	ds.Scan(rows)
+	ds.scan(rows)
 
 	ds.First()
 
@@ -102,7 +103,7 @@ func (ds *DataSet) Open() error {
 
 func (ds *DataSet) Close() {
 	ds.Sql.Clear()
-	ds.Columns = nil
+	//ds.Fields = nil
 	ds.Rows = nil
 	ds.Params = nil
 	ds.Macros = nil
@@ -133,75 +134,6 @@ func (ds *DataSet) Exec() (sql.Result, error) {
 
 	return stmt.Exec(ds.GetParams()...)
 }
-
-//func (ds *DataSet) InsertReturning(fieldName ...output) (*Params, error) {
-//
-//	vsql := ds.GetSql()
-//
-//	if ds.Connection.log {
-//		log.Println(vsql)
-//		ds.PrintParam()
-//	}
-//
-//	//joinFieldName := strings.Join(fieldName, ",")
-//
-//	var params []any
-//	for key, param := range ds.Params.value {
-//		switch param.ParamType {
-//		case IN:
-//			params = append(params, sql.Named(key, param.Value.Value))
-//		}
-//	}
-//
-//	var joinFieldName string
-//	var paramStr string
-//	var vparam *Params = NewParams()
-//
-//	count := 0
-//	//for i := 0; i < len(fieldName); i++
-//	for key, value := range fieldName {
-//		if count < len(fieldName)-1 {
-//			joinFieldName = joinFieldName + key + ","
-//			paramStr = paramStr + ":OUT_" + strings.ToUpper(key) + ","
-//		} else if count == len(fieldName)-1 {
-//			joinFieldName = joinFieldName + key
-//			paramStr = paramStr + ":OUT_" + strings.ToUpper(key)
-//		}
-//
-//		param := NewParam(OUT)
-//		vparam.value[key] = param
-//		out := &param.Value.Value
-//
-//		//params = append(params, sql.Named("OUT_"+strings.ToUpper(fieldName[i]), sql.Out{Dest: out}))
-//		params = append(params, sql.Out{Dest: out})
-//
-//		count++
-//	}
-//
-//	var returningStr string
-//	switch ds.Connection.Dialect {
-//	case ORACLE:
-//		returningStr = returningStr + " RETURNING " + joinFieldName + " INTO "
-//	case POSTGRESQL:
-//		returningStr = returningStr + strings.ToUpper(" RETURNING "+joinFieldName)
-//	}
-//
-//	stmt, err := ds.Connection.DB.Prepare(vsql + returningStr + paramStr)
-//
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	defer stmt.Close()
-//
-//	_, err = stmt.Exec(params)
-//
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return vparam, nil
-//}
 
 func (ds *DataSet) Delete() (int64, error) {
 	result, err := ds.Exec()
@@ -246,7 +178,7 @@ func (ds *DataSet) GetSql() (sql string) {
 				sqlWhereMasterDetail = sqlWhereMasterDetail + df[i] + " = :" + alias + " and "
 			}
 
-			ds.SetInputParam(alias, ds.MasterSouce.FieldByName(mf[i]).Value)
+			ds.SetInputParam(alias, ds.MasterSouce.FieldByName(mf[i]).AsValue())
 		}
 
 		if sqlWhereMasterDetail != "" {
@@ -259,7 +191,7 @@ func (ds *DataSet) GetSql() (sql string) {
 
 func (ds *DataSet) GetParams() []any {
 	var param []any
-	for key, prm := range ds.Params.value {
+	for key, prm := range ds.Params.List {
 		switch prm.ParamType {
 		case IN:
 			param = append(param, sql.Named(key, prm.Value.Value))
@@ -280,11 +212,11 @@ func (ds *DataSet) GetMacros() []any {
 	return macro
 }
 
-func (ds *DataSet) Scan(list *sql.Rows) {
-	columntypes, _ := list.ColumnTypes()
+func (ds *DataSet) scan(list *sql.Rows) {
+	fieldTypes, _ := list.ColumnTypes()
 	fields, _ := list.Columns()
 	for list.Next() {
-		columns := make([]interface{}, len(fields))
+		columns := make([]any, len(fields))
 
 		for i := range columns {
 			columns[i] = &columns[i]
@@ -296,15 +228,17 @@ func (ds *DataSet) Scan(list *sql.Rows) {
 			print(err)
 		}
 
-		row := make(map[string]Field)
+		row := NewRow()
 
 		for i, value := range columns {
-			field := NewField(fields[i], columntypes[i])
-			field.Value.Value = value
+			field := ds.Fields.Add(fields[i])
+			field.DataType = fieldTypes[i]
 			field.Order = i + 1
 			field.Index = i
 
-			row[fields[i]] = field
+			row.List[strings.ToUpper(fields[i])] = variant{
+				Value: value,
+			}
 		}
 
 		ds.Rows = append(ds.Rows, row)
@@ -317,7 +251,7 @@ func (ds *DataSet) ParamByName(paramName string) Param {
 
 func (ds *DataSet) SetInputParam(paramName string, paramValue any) *DataSet {
 
-	ds.Params.value[paramName] = Param{Value: variant{Value: paramValue}, ParamType: IN}
+	ds.Params.List[paramName] = Param{Value: variant{Value: paramValue}, ParamType: IN}
 
 	return ds
 }
@@ -326,19 +260,19 @@ func (ds *DataSet) SetOutputParam(paramName string, paramType any) *DataSet {
 	switch paramType.(type) {
 	case int, int8, int16, int32, int64:
 		dataType := int64(0)
-		ds.Params.value[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		ds.Params.List[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
 	case float32:
 		dataType := float32(0)
-		ds.Params.value[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		ds.Params.List[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
 	case float64:
 		dataType := float64(0)
-		ds.Params.value[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		ds.Params.List[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
 	case string:
 		dataType := generateString()
-		ds.Params.value[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		ds.Params.List[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
 	default:
 		dataType := float64(0)
-		ds.Params.value[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		ds.Params.List[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
 	}
 	return ds
 }
@@ -350,14 +284,42 @@ func (ds *DataSet) SetMacro(macroName string, macroValue any) *DataSet {
 	return ds
 }
 
-func (ds *DataSet) FieldByName(fieldName string) Field {
-	fieldName = strings.ToUpper(fieldName)
+func (ds *DataSet) CreateFields() error {
 
-	if len(ds.Rows) > 0 {
-		return ds.Rows[ds.Index][fieldName]
-	} else {
-		return Field{}
+	stmt, err := sqlparser.Parse(ds.GetSql())
+
+	if err != nil {
+		return err
 	}
+
+	ds.Fields = NewFields()
+	ds.Fields.Owner = ds
+
+	sel, ok := stmt.(*sqlparser.Select)
+	if ok {
+		for _, expr := range sel.SelectExprs {
+			_, ok := expr.(sqlparser.SelectExpr)
+			if ok {
+				alias, ok := expr.(*sqlparser.AliasedExpr)
+				if ok {
+					column, ok := alias.Expr.(*sqlparser.ColName)
+					if ok {
+						_ = ds.Fields.Add(column.Name.String())
+					}
+
+					if !alias.As.IsEmpty() {
+						_ = ds.Fields.Add(alias.As.String())
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (ds *DataSet) FieldByName(fieldName string) *Field {
+	return ds.Fields.FieldByName(fieldName)
 }
 
 func (ds *DataSet) Locate(key string, value any) bool {
@@ -366,11 +328,11 @@ func (ds *DataSet) Locate(key string, value any) bool {
 	for ds.Eof() == false {
 		switch value.(type) {
 		case string:
-			if ds.FieldByName(key).Value == value {
+			if ds.FieldByName(key).AsValue() == value {
 				return true
 			}
 		default:
-			if ds.FieldByName(key).Value == value {
+			if ds.FieldByName(key).AsValue() == value {
 				return true
 			}
 		}
@@ -452,41 +414,83 @@ func (ds *DataSet) toStructUniqResult(modelValue reflect.Value) error {
 				continue
 			}
 
-			fieldValue := reflect.New(field.Type).Elem().Interface()
-			fieldType := reflect.New(field.Type).Elem().Type()
+			var fieldValue any
 
-			switch fieldValue.(type) {
-			case int:
-				val := ds.FieldByName(fieldName).AsInt()
-				fieldValue = reflect.ValueOf(val).Convert(fieldType).Interface()
-			case int8:
-				val := ds.FieldByName(fieldName).AsInt8()
-				fieldValue = reflect.ValueOf(val).Convert(fieldType).Interface()
-			case int16:
-				val := ds.FieldByName(fieldName).AsInt16()
-				fieldValue = reflect.ValueOf(val).Convert(fieldType).Interface()
-			case int32:
-				val := ds.FieldByName(fieldName).AsInt32()
-				fieldValue = reflect.ValueOf(val).Convert(fieldType).Interface()
-			case int64:
-				val := ds.FieldByName(fieldName).AsInt64()
-				fieldValue = reflect.ValueOf(val).Convert(fieldType).Interface()
-			case float32, float64:
-				val := ds.FieldByName(fieldName).AsFloat64()
-				fieldValue = reflect.ValueOf(val).Convert(fieldType).Interface()
-			default:
-				fieldValue = ds.FieldByName(fieldName).AsValue()
-			}
+			if field.Type.Kind() == reflect.Pointer {
+				if ds.FieldByName(fieldName).IsNotNull() {
+					fieldValue = ds.GetValue(ds.FieldByName(fieldName), modelValue.Field(i).Interface())
 
-			if fieldValue != nil {
-				rf := modelValue.Field(i)
-				rf = reflect.NewAt(rf.Type(), unsafe.Pointer(rf.UnsafeAddr())).Elem()
-				rf.Set(reflect.ValueOf(fieldValue))
+					if fieldValue != nil {
+						rf := modelValue.Field(i)
+						rf = reflect.NewAt(rf.Type(), unsafe.Pointer(rf.UnsafeAddr())).Elem()
+						rf.Set(reflect.ValueOf(fieldValue))
+					}
+				}
+			} else {
+				fieldValue = ds.GetValue(ds.FieldByName(fieldName), modelValue.Field(i).Interface())
+
+				if fieldValue != nil {
+					rf := modelValue.Field(i)
+					rf = reflect.NewAt(rf.Type(), unsafe.Pointer(rf.UnsafeAddr())).Elem()
+					rf.Set(reflect.ValueOf(fieldValue))
+				}
 			}
 		}
 	}
 
 	return nil
+}
+
+func (ds *DataSet) GetValue(field *Field, fieldType any) any {
+	var fieldValue any
+	valueType := reflect.TypeOf(fieldType)
+	switch fieldType.(type) {
+	case int:
+		val := field.AsInt()
+		fieldValue = reflect.ValueOf(val).Convert(valueType).Interface()
+	case int8:
+		val := field.AsInt8()
+		fieldValue = reflect.ValueOf(val).Convert(valueType).Interface()
+	case int16:
+		val := field.AsInt16()
+		fieldValue = reflect.ValueOf(val).Convert(valueType).Interface()
+	case int32:
+		val := field.AsInt32()
+		fieldValue = reflect.ValueOf(val).Convert(valueType).Interface()
+	case int64:
+		val := field.AsInt64()
+		fieldValue = reflect.ValueOf(val).Convert(valueType).Interface()
+	case float32, float64:
+		val := field.AsFloat64()
+		fieldValue = reflect.ValueOf(val).Convert(valueType).Interface()
+	case string:
+		val := field.AsString()
+		fieldValue = reflect.ValueOf(val).Convert(valueType).Interface()
+	case *int:
+		val := field.AsInt()
+		fieldValue = reflect.ValueOf(&val).Convert(valueType).Interface()
+	case *int8:
+		val := field.AsInt8()
+		fieldValue = reflect.ValueOf(&val).Convert(valueType).Interface()
+	case *int16:
+		val := field.AsInt16()
+		fieldValue = reflect.ValueOf(&val).Convert(valueType).Interface()
+	case *int32:
+		val := field.AsInt32()
+		fieldValue = reflect.ValueOf(&val).Convert(valueType).Interface()
+	case *int64:
+		val := field.AsInt64()
+		fieldValue = reflect.ValueOf(&val).Convert(valueType).Interface()
+	case *float32, *float64:
+		val := field.AsFloat64()
+		fieldValue = reflect.ValueOf(&val).Convert(valueType).Interface()
+	case *string:
+		val := field.AsString()
+		fieldValue = reflect.ValueOf(&val).Convert(valueType).Interface()
+	default:
+		fieldValue = field.AsValue()
+	}
+	return fieldValue
 }
 
 func (ds *DataSet) toStructList(modelValue reflect.Value) error {
@@ -532,7 +536,7 @@ func JoinSlice(list any) string {
 }
 
 func (ds *DataSet) PrintParam() {
-	for key, value := range ds.Params.value {
+	for key, value := range ds.Params.List {
 		fmt.Println("Colum:", key, "Value:", value.AsValue(), "Type:", reflect.TypeOf(value.AsValue()))
 	}
 }
@@ -543,4 +547,8 @@ func generateString() string {
 		result += "abcdefghij"
 	}
 	return result
+}
+
+func (ds *DataSet) ParseSql() (sqlparser.Statement, error) {
+	return sqlparser.Parse(ds.GetSql())
 }

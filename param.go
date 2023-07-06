@@ -15,13 +15,15 @@ const (
 
 type Value interface{ *variant | variant }
 type Param struct {
+	Name      string
 	Value     variant
 	ParamType ParamType
 	DataType  reflect.Type
 }
 
-func NewParam(paramType ParamType) Param {
+func NewParam(paramName string, paramType ParamType) Param {
 	return Param{
+		Name:      paramName,
 		ParamType: paramType,
 	}
 }
