@@ -9,8 +9,8 @@ type Fields struct {
 	List  map[string]*Field
 }
 
-func NewFields() Fields {
-	fields := Fields{
+func NewFields() *Fields {
+	fields := &Fields{
 		List: make(map[string]*Field),
 	}
 	return fields

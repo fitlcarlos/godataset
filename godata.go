@@ -35,19 +35,18 @@ type DS interface {
 }
 
 type DataSet struct {
-	Connection       *Conn
-	Sql              Strings
-	Fields           Fields
-	Rows             []Row
-	Params           *Params
-	Macros           Macros
-	Index            int
-	Recno            int
-	DetailFields     []string
-	MasterSouce      *DataSet
-	MasterFields     []string
-	MasterDetailList map[string]MasterDetails
-	IndexFieldNames  string
+	Connection      *Conn
+	Sql             Strings
+	Fields          *Fields
+	Rows            []Row
+	Params          *Params
+	Macros          Macros
+	Index           int
+	Recno           int
+	DetailFields    []string
+	MasterSouce     *DataSet
+	MasterFields    []string
+	IndexFieldNames string
 }
 
 func NewDataSet(db *Conn) *DataSet {
@@ -102,7 +101,7 @@ func (ds *DataSet) Open() error {
 
 func (ds *DataSet) Close() {
 	ds.Sql.Clear()
-	//ds.Fields = nil
+	ds.Fields = nil
 	ds.Rows = nil
 	ds.Params = nil
 	ds.Macros = nil
@@ -111,7 +110,6 @@ func (ds *DataSet) Close() {
 	ds.DetailFields = nil
 	ds.MasterSouce = nil
 	ds.MasterFields = nil
-	ds.MasterDetailList = nil
 	ds.IndexFieldNames = ""
 }
 
@@ -378,6 +376,11 @@ func (ds *DataSet) Count() int {
 func (ds *DataSet) AddSql(sql string) *DataSet {
 	ds.Sql.Add(sql)
 
+	return ds
+}
+
+func (ds *DataSet) AddMasterSource(dataSet *DataSet) *DataSet {
+	ds.MasterSouce = dataSet
 	return ds
 }
 
