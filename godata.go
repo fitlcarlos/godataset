@@ -43,9 +43,9 @@ type DataSet struct {
 	Macros           Macros
 	Index            int
 	Recno            int
-	DetailFields     string
+	DetailFields     []string
 	MasterSouce      *DataSet
-	MasterFields     string
+	MasterFields     []string
 	MasterDetailList map[string]MasterDetails
 	IndexFieldNames  string
 }
@@ -108,9 +108,9 @@ func (ds *DataSet) Close() {
 	ds.Macros = nil
 	ds.Index = 0
 	ds.Recno = 0
-	ds.DetailFields = ""
+	ds.DetailFields = nil
 	ds.MasterSouce = nil
-	ds.MasterFields = ""
+	ds.MasterFields = nil
 	ds.MasterDetailList = nil
 	ds.IndexFieldNames = ""
 }
@@ -165,21 +165,19 @@ func (ds *DataSet) GetSql() (sql string) {
 
 	if ds.MasterSouce != nil {
 		var sqlWhereMasterDetail string
-		mf := strings.Split(ds.MasterFields, ";")
-		df := strings.Split(ds.DetailFields, ";")
 
-		if ds.MasterFields != "" || ds.DetailFields != "" {
-			for i := 0; i < len(mf); i++ {
+		if len(ds.MasterFields) != 0 || len(ds.DetailFields) != 0 {
+			for i := 0; i < len(ds.MasterFields); i++ {
 
 				aliasHash, _ := uuid.NewUUID()
 				alias := strings.Replace(aliasHash.String(), "-", "", -1)
-				if i == len(mf)-1 {
-					sqlWhereMasterDetail = sqlWhereMasterDetail + df[i] + " = :" + alias
+				if i == len(ds.MasterFields)-1 {
+					sqlWhereMasterDetail = sqlWhereMasterDetail + ds.DetailFields[i] + " = :" + alias
 				} else {
-					sqlWhereMasterDetail = sqlWhereMasterDetail + df[i] + " = :" + alias + " and "
+					sqlWhereMasterDetail = sqlWhereMasterDetail + ds.DetailFields[i] + " = :" + alias + " and "
 				}
 
-				ds.SetInputParam(alias, ds.MasterSouce.FieldByName(mf[i]).AsValue())
+				ds.SetInputParam(alias, ds.MasterSouce.FieldByName(ds.MasterFields[i]).AsValue())
 			}
 
 			if sqlWhereMasterDetail != "" {
@@ -380,6 +378,16 @@ func (ds *DataSet) Count() int {
 func (ds *DataSet) AddSql(sql string) *DataSet {
 	ds.Sql.Add(sql)
 
+	return ds
+}
+
+func (ds *DataSet) AddDetailFields(fields ...string) *DataSet {
+	ds.DetailFields = fields
+	return ds
+}
+
+func (ds *DataSet) AddMasterFields(fields ...string) *DataSet {
+	ds.MasterFields = fields
 	return ds
 }
 
