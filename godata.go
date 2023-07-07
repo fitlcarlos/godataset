@@ -49,12 +49,13 @@ type DataSet struct {
 
 func NewDataSet(db *Conn) *DataSet {
 	ds := &DataSet{
-		Connection: db,
-		Index:      0,
-		Recno:      0,
-		Fields:     NewFields(),
-		Params:     NewParams(),
-		Macros:     make(Macros),
+		Connection:  db,
+		Index:       0,
+		Recno:       0,
+		Fields:      NewFields(),
+		Params:      NewParams(),
+		Macros:      make(Macros),
+		MasterSouce: NewMasterSource(),
 	}
 
 	return ds
@@ -105,9 +106,7 @@ func (ds *DataSet) Close() {
 	ds.Macros = nil
 	ds.Index = 0
 	ds.Recno = 0
-	//ds.DetailFields = nil
 	ds.MasterSouce = nil
-	//ds.MasterFields = nil
 	ds.IndexFieldNames = ""
 }
 

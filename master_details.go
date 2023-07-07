@@ -6,6 +6,10 @@ type MasterSouce struct {
 	MasterFields []string
 }
 
+func NewMasterSource() *MasterSouce {
+	ms := &MasterSouce{}
+	return ms
+}
 func (ms *MasterSouce) AddMasterSource(dataSet *DataSet) *MasterSouce {
 	ms.DataSource = dataSet
 	return ms
