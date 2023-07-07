@@ -43,9 +43,7 @@ type DataSet struct {
 	Macros          Macros
 	Index           int
 	Recno           int
-	DetailFields    []string
-	MasterSouce     *DataSet
-	MasterFields    []string
+	MasterSouce     *MasterSouce
 	IndexFieldNames string
 }
 
@@ -107,9 +105,9 @@ func (ds *DataSet) Close() {
 	ds.Macros = nil
 	ds.Index = 0
 	ds.Recno = 0
-	ds.DetailFields = nil
+	//ds.DetailFields = nil
 	ds.MasterSouce = nil
-	ds.MasterFields = nil
+	//ds.MasterFields = nil
 	ds.IndexFieldNames = ""
 }
 
@@ -164,18 +162,18 @@ func (ds *DataSet) GetSql() (sql string) {
 	if ds.MasterSouce != nil {
 		var sqlWhereMasterDetail string
 
-		if len(ds.MasterFields) != 0 || len(ds.DetailFields) != 0 {
-			for i := 0; i < len(ds.MasterFields); i++ {
+		if len(ds.MasterSouce.MasterFields) != 0 || len(ds.MasterSouce.DetailFields) != 0 {
+			for i := 0; i < len(ds.MasterSouce.MasterFields); i++ {
 
 				aliasHash, _ := uuid.NewUUID()
 				alias := strings.Replace(aliasHash.String(), "-", "", -1)
-				if i == len(ds.MasterFields)-1 {
-					sqlWhereMasterDetail = sqlWhereMasterDetail + ds.DetailFields[i] + " = :" + alias
+				if i == len(ds.MasterSouce.MasterFields)-1 {
+					sqlWhereMasterDetail = sqlWhereMasterDetail + ds.MasterSouce.DetailFields[i] + " = :" + alias
 				} else {
-					sqlWhereMasterDetail = sqlWhereMasterDetail + ds.DetailFields[i] + " = :" + alias + " and "
+					sqlWhereMasterDetail = sqlWhereMasterDetail + ds.MasterSouce.DetailFields[i] + " = :" + alias + " and "
 				}
 
-				ds.SetInputParam(alias, ds.MasterSouce.FieldByName(ds.MasterFields[i]).AsValue())
+				ds.SetInputParam(alias, ds.MasterSouce.DataSource.FieldByName(ds.MasterSouce.MasterFields[i]).AsValue())
 			}
 
 			if sqlWhereMasterDetail != "" {
@@ -380,17 +378,17 @@ func (ds *DataSet) AddSql(sql string) *DataSet {
 }
 
 func (ds *DataSet) AddMasterSource(dataSet *DataSet) *DataSet {
-	ds.MasterSouce = dataSet
+	ds.MasterSouce.AddMasterSource(dataSet)
 	return ds
 }
 
 func (ds *DataSet) AddDetailFields(fields ...string) *DataSet {
-	ds.DetailFields = fields
+	ds.MasterSouce.AddDetailFields(fields...)
 	return ds
 }
 
 func (ds *DataSet) AddMasterFields(fields ...string) *DataSet {
-	ds.MasterFields = fields
+	ds.MasterSouce.AddMasterFields(fields...)
 	return ds
 }
 
