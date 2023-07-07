@@ -90,11 +90,17 @@ func TestDataSetToStruct(t *testing.T) {
 }
 
 func TestDataSetToStructList(t *testing.T) {
-	type Process struct {
-		Descricao string
+	type MedidasDto struct {
+		IdMedida      int64   `json:"id_medida"`
+		CodMedidaPneu string  `json:"cod_medida_pneu"`
+		CodRodaPneu   string  `json:"cod_roda_pneu"`
+		Medida        string  `json:"medida"`
+		Descricao     string  `json:"descricao"`
+		Ativo         string  `json:"ativo"`
+		Perimetro     float64 `json:"perimetro"`
 	}
 
-	connectStr := "oracle://nbsama:new@100.0.65.224:1521/fab"
+	connectStr := "oracle://NBS:NEW@100.0.66.145:1521/NBS"
 
 	db, err := NewConnection(DialectType(ORACLE), connectStr)
 
@@ -106,17 +112,21 @@ func TestDataSetToStructList(t *testing.T) {
 
 	ds := NewDataSet(db)
 	err = ds.
-		AddSql("SELECT DESCRICAO FROM FAB_PROCESSO").
-		AddSql("WHERE ID BETWEEN :idini AND :idfim").
-		SetInputParam("idini", 20).
-		SetInputParam("idfim", 100).
+		AddSql("SELECT ID_MEDIDA       as idMedida,").
+		AddSql("COD_MEDIDA_PNEU as codMedidaPneu,").
+		AddSql("COD_RODA_PNEU   as codRodaPneu,").
+		AddSql("MEDIDA,").
+		AddSql("DESCRICAO,").
+		AddSql("PERIMETRO,").
+		AddSql("ATIVO").
+		AddSql("FROM RECAPAGEM_PNEU_MEDIDA").
 		Open()
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var dto []Process
+	var dto []MedidasDto
 
 	err = ds.ToStruct(&dto)
 
@@ -125,7 +135,7 @@ func TestDataSetToStructList(t *testing.T) {
 	}
 
 	for i := 0; i < len(dto); i++ {
-		t.Log(dto[i].Descricao)
+		t.Log(dto[i].IdMedida, dto[i].Descricao)
 	}
 }
 

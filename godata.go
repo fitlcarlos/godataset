@@ -300,13 +300,13 @@ func (ds *DataSet) CreateFields() error {
 			if ok {
 				alias, ok := expr.(*sqlparser.AliasedExpr)
 				if ok {
-					column, ok := alias.Expr.(*sqlparser.ColName)
-					if ok {
-						_ = ds.Fields.Add(column.Name.String())
-					}
-
 					if !alias.As.IsEmpty() {
 						_ = ds.Fields.Add(alias.As.String())
+					} else {
+						column, ok := alias.Expr.(*sqlparser.ColName)
+						if ok {
+							_ = ds.Fields.Add(column.Name.String())
+						}
 					}
 				}
 			}
