@@ -185,6 +185,34 @@ func TestDataSetToSInsertReturn(t *testing.T) {
 	fmt.Println("Descrição", ds.ParamByName("OUT_DESCRICAO").AsString())
 }
 
+func TestDataSetMasterDetail(t *testing.T) {
+	connectStr := "oracle://nbsama:new@100.0.65.224:1521/fab"
+
+	db, err := NewConnectionOracle(connectStr)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer db.Close()
+
+	ds1 := NewDataSet(db)
+	ds1.
+		AddSql("select id, descricao from fab_processo").
+		AddSql("where id = 41").
+		Open()
+
+	ds2 := NewDataSet(db)
+	ds2.AddSql("select id, codigo, descricao, id_processo from fab_operacao").
+		AddMasterSource(ds1).
+		AddDetailFields("id_processo").
+		AddMasterFields("id").
+		Open()
+
+	fmt.Println("Processo:", ds1.FieldByName("descricao").AsString())
+	fmt.Println("Operações do processo:", ds2.FieldByName("descricao").AsString())
+
+}
 func TestDataSetParseSql(t *testing.T) {
 
 	connectStr := "oracle://nbsama:new@100.0.65.224:1521/fab"

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
-	"github.com/google/uuid"
 	"reflect"
 	"strings"
 	"unsafe"
@@ -68,7 +67,7 @@ func (ds *DataSet) Open() error {
 
 	ds.CreateFields()
 
-	sql := ds.GetSql()
+	sql := ds.GetSqlMasterDetail()
 
 	if ds.Connection.log {
 		fmt.Println(sql)
@@ -158,14 +157,20 @@ func (ds *DataSet) GetSql() (sql string) {
 		}
 	}
 
+	return sql
+}
+
+func (ds *DataSet) GetSqlMasterDetail() (sql string) {
+
+	sql = ds.GetSql()
+
 	if ds.MasterSouce.DataSource != nil {
 		var sqlWhereMasterDetail string
 
 		if len(ds.MasterSouce.MasterFields) != 0 || len(ds.MasterSouce.DetailFields) != 0 {
 			for i := 0; i < len(ds.MasterSouce.MasterFields); i++ {
 
-				aliasHash, _ := uuid.NewUUID()
-				alias := strings.Replace(aliasHash.String(), "-", "", -1)
+				alias := ds.MasterSouce.MasterFields[i] + fmt.Sprintf("%04d", i)
 				if i == len(ds.MasterSouce.MasterFields)-1 {
 					sqlWhereMasterDetail = sqlWhereMasterDetail + ds.MasterSouce.DetailFields[i] + " = :" + alias
 				} else {
@@ -176,7 +181,7 @@ func (ds *DataSet) GetSql() (sql string) {
 			}
 
 			if sqlWhereMasterDetail != "" {
-				sql = "select * from (" + sql + ") where " + sqlWhereMasterDetail
+				sql = "select * from (" + sql + ") t where " + sqlWhereMasterDetail
 			}
 		} else {
 			fmt.Println("MasterFields or DetailFields field cannot be empty")
