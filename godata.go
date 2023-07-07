@@ -158,7 +158,7 @@ func (ds *DataSet) GetSql() (sql string) {
 		}
 	}
 
-	if ds.MasterSouce != nil {
+	if ds.MasterSouce.DataSource != nil {
 		var sqlWhereMasterDetail string
 
 		if len(ds.MasterSouce.MasterFields) != 0 || len(ds.MasterSouce.DetailFields) != 0 {
