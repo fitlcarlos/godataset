@@ -65,7 +65,9 @@ func (ds *DataSet) Open() error {
 	ds.Index = 0
 	ds.Recno = 0
 
-	ds.CreateFields()
+	if len(ds.Fields.List) == 0 {
+		ds.CreateFields()
+	}
 
 	sql := ds.GetSqlMasterDetail()
 
