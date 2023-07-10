@@ -6,22 +6,22 @@ import (
 
 type Fields struct {
 	Owner *DataSet
-	List  map[string]*Field
+	List  []*Field
 }
 
 func NewFields() *Fields {
 	fields := &Fields{
-		List: make(map[string]*Field),
+		List: []*Field{},
 	}
 	return fields
 }
 func (fd *Fields) FieldByName(fieldName string) *Field {
-	field, ok := fd.List[strings.ToUpper(fieldName)]
-	if ok {
-		return field
-	} else {
-		return nil
+	for i := 0; i < len(fd.List); i++ {
+		if strings.ToUpper(fd.List[i].Name) == strings.ToUpper(fieldName) {
+			return fd.List[i]
+		}
 	}
+	return nil
 }
 
 func (fd *Fields) Add(fieldName string) *Field {
@@ -32,7 +32,16 @@ func (fd *Fields) Add(fieldName string) *Field {
 	} else {
 		field = NewField(fieldName)
 		field.Owner = fd
-		fd.List[strings.ToUpper(fieldName)] = field
+		fd.List = append(fd.List, field)
 		return field
 	}
+}
+
+func (fd *Fields) Clear() *Fields {
+	fd.List = nil
+	return fd
+}
+
+func (fd *Fields) Count() int {
+	return len(fd.List)
 }
