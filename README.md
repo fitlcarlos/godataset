@@ -1,2 +1,2 @@
-# nbs-resultset
+# godata
 
