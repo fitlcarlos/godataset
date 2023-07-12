@@ -56,6 +56,7 @@ func NewDataSet(db *Conn) *DataSet {
 		Macros:      make(Macros),
 		MasterSouce: NewMasterSource(),
 	}
+	ds.Fields.Owner = ds
 
 	return ds
 }
@@ -295,9 +296,6 @@ func (ds *DataSet) CreateFields() error {
 	if err != nil {
 		return err
 	}
-
-	ds.Fields = NewFields()
-	ds.Fields.Owner = ds
 
 	sel, ok := stmt.(*sqlparser.Select)
 	if ok {
