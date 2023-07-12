@@ -1,7 +1,7 @@
 package godata
 
 type Macro struct {
-	Value variant
+	Value Variant
 }
 
 type Macros map[string]Macro

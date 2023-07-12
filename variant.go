@@ -8,15 +8,15 @@ import (
 	"time"
 )
 
-type variant struct {
+type Variant struct {
 	Value any
 }
 
-func (v variant) AsValue() any {
+func (v Variant) AsValue() any {
 	return v.Value
 }
 
-func (v variant) AsString() string {
+func (v Variant) AsString() string {
 	value := ""
 	switch val := v.Value.(type) {
 	case nil:
@@ -38,7 +38,7 @@ func (v variant) AsString() string {
 	return value
 }
 
-func (v variant) AsInt() int {
+func (v Variant) AsInt() int {
 	switch val := v.Value.(type) {
 	case nil:
 		return int(0)
@@ -67,7 +67,7 @@ func (v variant) AsInt() int {
 	}
 }
 
-func (v variant) AsInt8() int8 {
+func (v Variant) AsInt8() int8 {
 	switch val := v.Value.(type) {
 	case nil:
 		return int8(0)
@@ -96,7 +96,7 @@ func (v variant) AsInt8() int8 {
 	}
 }
 
-func (v variant) AsInt16() int16 {
+func (v Variant) AsInt16() int16 {
 	switch val := v.Value.(type) {
 	case nil:
 		return int16(0)
@@ -125,7 +125,7 @@ func (v variant) AsInt16() int16 {
 	}
 }
 
-func (v variant) AsInt32() int32 {
+func (v Variant) AsInt32() int32 {
 	switch val := v.Value.(type) {
 	case nil:
 		return int32(0)
@@ -154,7 +154,7 @@ func (v variant) AsInt32() int32 {
 	}
 }
 
-func (v variant) AsInt64() int64 {
+func (v Variant) AsInt64() int64 {
 	switch val := v.Value.(type) {
 	case nil:
 		return int64(0)
@@ -183,7 +183,7 @@ func (v variant) AsInt64() int64 {
 	}
 }
 
-func (v variant) AsFloat() float32 {
+func (v Variant) AsFloat() float32 {
 	switch val := v.Value.(type) {
 	case nil:
 		return float32(0)
@@ -206,7 +206,7 @@ func (v variant) AsFloat() float32 {
 	}
 }
 
-func (v variant) AsFloat64() float64 {
+func (v Variant) AsFloat64() float64 {
 	switch val := v.Value.(type) {
 	case nil:
 		return float64(0)
@@ -229,7 +229,7 @@ func (v variant) AsFloat64() float64 {
 	}
 }
 
-func (v variant) AsBool() bool {
+func (v Variant) AsBool() bool {
 	switch val := v.Value.(type) {
 	case nil:
 		return false
@@ -257,7 +257,7 @@ func (v variant) AsBool() bool {
 	}
 }
 
-func (v variant) AsDateTime() time.Time {
+func (v Variant) AsDateTime() time.Time {
 	switch v.Value.(type) {
 	case nil:
 		data, _ := time.Parse(time.DateTime, time.DateTime)
@@ -271,7 +271,7 @@ func (v variant) AsDateTime() time.Time {
 	}
 }
 
-func (v variant) IsNull() bool {
+func (v Variant) IsNull() bool {
 	switch val := v.Value.(type) {
 	case nil:
 		return true
@@ -282,7 +282,7 @@ func (v variant) IsNull() bool {
 	}
 }
 
-func (v variant) IsNotNull() bool {
+func (v Variant) IsNotNull() bool {
 	return !v.IsNull()
 }
 

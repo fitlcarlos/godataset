@@ -94,7 +94,7 @@ func (field Field) IsNotNull() bool {
 	return field.getVariant().IsNotNull()
 }
 
-func (field Field) getVariant() variant {
+func (field Field) getVariant() Variant {
 	index := field.Owner.Owner.Index
 	return field.Owner.Owner.Rows[index].List[strings.ToUpper(field.Name)]
 }

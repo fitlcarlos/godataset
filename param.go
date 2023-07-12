@@ -13,10 +13,10 @@ const (
 	INOUT ParamType = 2
 )
 
-type Value interface{ *variant | variant }
+type Value interface{ *Variant | Variant }
 type Param struct {
 	Name      string
-	Value     variant
+	Value     Variant
 	ParamType ParamType
 	DataType  reflect.Type
 }
@@ -27,10 +27,10 @@ func NewParam(paramName string, paramType ParamType) Param {
 		ParamType: paramType,
 	}
 }
-func (param Param) AsValue() variant {
+func (param Param) AsValue() Variant {
 	if IsPointer(param.Value.Value) {
 		a := reflect.ValueOf(param.Value.Value).Elem().Interface()
-		return variant{Value: a}
+		return Variant{Value: a}
 	} else {
 		return param.Value
 	}

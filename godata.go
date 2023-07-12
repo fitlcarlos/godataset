@@ -240,7 +240,7 @@ func (ds *DataSet) scan(list *sql.Rows) {
 			field.Order = i + 1
 			field.Index = i
 
-			row.List[strings.ToUpper(fields[i])] = variant{
+			row.List[strings.ToUpper(fields[i])] = Variant{
 				Value: value,
 			}
 		}
@@ -255,7 +255,7 @@ func (ds *DataSet) ParamByName(paramName string) Param {
 
 func (ds *DataSet) SetInputParam(paramName string, paramValue any) *DataSet {
 
-	ds.Params.List[paramName] = Param{Value: variant{Value: paramValue}, ParamType: IN}
+	ds.Params.List[paramName] = Param{Value: Variant{Value: paramValue}, ParamType: IN}
 
 	return ds
 }
@@ -264,26 +264,26 @@ func (ds *DataSet) SetOutputParam(paramName string, paramType any) *DataSet {
 	switch paramType.(type) {
 	case int, int8, int16, int32, int64:
 		dataType := int64(0)
-		ds.Params.List[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		ds.Params.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
 	case float32:
 		dataType := float32(0)
-		ds.Params.List[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		ds.Params.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
 	case float64:
 		dataType := float64(0)
-		ds.Params.List[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		ds.Params.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
 	case string:
 		dataType := generateString()
-		ds.Params.List[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		ds.Params.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
 	default:
 		dataType := float64(0)
-		ds.Params.List[paramName] = Param{Value: variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		ds.Params.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
 	}
 	return ds
 }
 
 func (ds *DataSet) SetMacro(macroName string, macroValue any) *DataSet {
 
-	ds.Macros[macroName] = Macro{Value: variant{Value: macroValue}}
+	ds.Macros[macroName] = Macro{Value: Variant{Value: macroValue}}
 
 	return ds
 }
