@@ -34,6 +34,11 @@ func (p *Params) Add(paramName string) Param {
 	}
 }
 
+func (p *Params) SetInputParam(paramName string, paramValue any) *Params {
+	p.List[paramName] = Param{Value: Variant{Value: paramValue}, ParamType: IN}
+	return p
+}
+
 func (p *Params) SetOutputParam(paramName string, paramType any) *Params {
 	switch paramType.(type) {
 	case int, int8, int16, int32, int64:

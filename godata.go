@@ -256,9 +256,7 @@ func (ds *DataSet) ParamByName(paramName string) Param {
 }
 
 func (ds *DataSet) SetInputParam(paramName string, paramValue any) *DataSet {
-
-	ds.Params.List[paramName] = Param{Value: Variant{Value: paramValue}, ParamType: IN}
-
+	ds.Params.SetInputParam(paramName, paramValue)
 	return ds
 }
 
@@ -268,9 +266,7 @@ func (ds *DataSet) SetOutputParam(paramName string, paramType any) *DataSet {
 }
 
 func (ds *DataSet) SetMacro(macroName string, macroValue any) *DataSet {
-
 	ds.Macros[macroName] = Macro{Value: Variant{Value: macroValue}}
-
 	return ds
 }
 
