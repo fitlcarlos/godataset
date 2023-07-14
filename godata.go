@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"reflect"
+	"regexp"
 	"strings"
 	"unsafe"
 )
@@ -262,23 +263,7 @@ func (ds *DataSet) SetInputParam(paramName string, paramValue any) *DataSet {
 }
 
 func (ds *DataSet) SetOutputParam(paramName string, paramType any) *DataSet {
-	switch paramType.(type) {
-	case int, int8, int16, int32, int64:
-		dataType := int64(0)
-		ds.Params.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
-	case float32:
-		dataType := float32(0)
-		ds.Params.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
-	case float64:
-		dataType := float64(0)
-		ds.Params.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
-	case string:
-		dataType := generateString()
-		ds.Params.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
-	default:
-		dataType := float64(0)
-		ds.Params.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
-	}
+	ds.Params.SetOutputParam(paramName, paramType)
 	return ds
 }
 
@@ -318,6 +303,20 @@ func (ds *DataSet) CreateFields() error {
 	}
 
 	return nil
+}
+
+func (ds *DataSet) Prepare() {
+	re := regexp.MustCompile(`:(\w+)`)
+	matches := re.FindAllStringSubmatch(ds.GetSql(), -1)
+
+	for _, match := range matches {
+		paramName := match[1]
+
+		param := Param{
+			Value: Variant{Value: ""},
+		}
+		ds.Params.List[paramName] = param
+	}
 }
 
 func (ds *DataSet) FieldByName(fieldName string) *Field {
@@ -553,9 +552,7 @@ func JoinSlice(list any) string {
 }
 
 func (ds *DataSet) PrintParam() {
-	for key, value := range ds.Params.List {
-		fmt.Println("Colum:", key, "Value:", value.AsValue(), "Type:", reflect.TypeOf(value.AsValue()))
-	}
+	ds.Params.PrintParam()
 }
 
 func generateString() string {
