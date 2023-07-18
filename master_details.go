@@ -25,12 +25,12 @@ func (ms *MasterSource) AddMasterFields(fields ...string) *MasterSource {
 	return ms
 }
 
-func (ms *MasterSource) ClearMasterFields(fields ...string) *MasterSource {
+func (ms *MasterSource) ClearMasterFields() *MasterSource {
 	ms.MasterFields = nil
 	return ms
 }
 
-func (ms *MasterSource) ClearDetailFields(fields ...string) *MasterSource {
+func (ms *MasterSource) ClearDetailFields() *MasterSource {
 	ms.DetailFields = nil
 	return ms
 }
