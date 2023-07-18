@@ -1,30 +1,40 @@
 package godata
 
-type MasterSouce struct {
+type MasterSource struct {
 	DataSource   *DataSet
 	DetailFields []string
 	MasterFields []string
 }
 
-func NewMasterSource() *MasterSouce {
-	ms := &MasterSouce{}
+func NewMasterSource() *MasterSource {
+	ms := &MasterSource{}
 	return ms
 }
-func (ms *MasterSouce) AddMasterSource(dataSet *DataSet) *MasterSouce {
+func (ms *MasterSource) AddMasterSource(dataSet *DataSet) *MasterSource {
 	ms.DataSource = dataSet
 	return ms
 }
 
-func (ms *MasterSouce) AddDetailFields(fields ...string) *MasterSouce {
+func (ms *MasterSource) AddDetailFields(fields ...string) *MasterSource {
 	ms.DetailFields = fields
 	return ms
 }
 
-func (ms *MasterSouce) AddMasterFields(fields ...string) *MasterSouce {
+func (ms *MasterSource) AddMasterFields(fields ...string) *MasterSource {
 	ms.MasterFields = fields
 	return ms
 }
 
-func (ms *MasterSouce) And() *DataSet {
+func (ms *MasterSource) ClearMasterFields(fields ...string) *MasterSource {
+	ms.MasterFields = nil
+	return ms
+}
+
+func (ms *MasterSource) ClearDetailFields(fields ...string) *MasterSource {
+	ms.DetailFields = nil
+	return ms
+}
+
+func (ms *MasterSource) And() *DataSet {
 	return ms.DataSource
 }

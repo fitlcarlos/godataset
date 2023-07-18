@@ -43,19 +43,19 @@ type DataSet struct {
 	Macros          Macros
 	Index           int
 	Recno           int
-	MasterSouce     *MasterSouce
+	MasterSource    *MasterSource
 	IndexFieldNames string
 }
 
 func NewDataSet(db *Conn) *DataSet {
 	ds := &DataSet{
-		Connection:  db,
-		Index:       0,
-		Recno:       0,
-		Fields:      NewFields(),
-		Params:      NewParams(),
-		Macros:      make(Macros),
-		MasterSouce: NewMasterSource(),
+		Connection:   db,
+		Index:        0,
+		Recno:        0,
+		Fields:       NewFields(),
+		Params:       NewParams(),
+		Macros:       make(Macros),
+		MasterSource: NewMasterSource(),
 	}
 	ds.Fields.Owner = ds
 
@@ -109,7 +109,7 @@ func (ds *DataSet) Close() {
 	ds.Macros = nil
 	ds.Index = 0
 	ds.Recno = 0
-	ds.MasterSouce = nil
+	ds.MasterSource = nil
 	ds.IndexFieldNames = ""
 }
 
@@ -168,20 +168,20 @@ func (ds *DataSet) GetSqlMasterDetail() (sql string) {
 
 	sql = ds.GetSql()
 
-	if ds.MasterSouce.DataSource != nil {
+	if ds.MasterSource.DataSource != nil {
 		var sqlWhereMasterDetail string
 
-		if len(ds.MasterSouce.MasterFields) != 0 || len(ds.MasterSouce.DetailFields) != 0 {
-			for i := 0; i < len(ds.MasterSouce.MasterFields); i++ {
+		if len(ds.MasterSource.MasterFields) != 0 || len(ds.MasterSource.DetailFields) != 0 {
+			for i := 0; i < len(ds.MasterSource.MasterFields); i++ {
 
-				alias := ds.MasterSouce.MasterFields[i] + fmt.Sprintf("%04d", i)
-				if i == len(ds.MasterSouce.MasterFields)-1 {
-					sqlWhereMasterDetail = sqlWhereMasterDetail + ds.MasterSouce.DetailFields[i] + " = :" + alias
+				alias := ds.MasterSource.MasterFields[i] + fmt.Sprintf("%04d", i)
+				if i == len(ds.MasterSource.MasterFields)-1 {
+					sqlWhereMasterDetail = sqlWhereMasterDetail + ds.MasterSource.DetailFields[i] + " = :" + alias
 				} else {
-					sqlWhereMasterDetail = sqlWhereMasterDetail + ds.MasterSouce.DetailFields[i] + " = :" + alias + " and "
+					sqlWhereMasterDetail = sqlWhereMasterDetail + ds.MasterSource.DetailFields[i] + " = :" + alias + " and "
 				}
 
-				ds.SetInputParam(alias, ds.MasterSouce.DataSource.FieldByName(ds.MasterSouce.MasterFields[i]).AsValue())
+				ds.SetInputParam(alias, ds.MasterSource.DataSource.FieldByName(ds.MasterSource.MasterFields[i]).AsValue())
 			}
 
 			if sqlWhereMasterDetail != "" {
@@ -377,17 +377,27 @@ func (ds *DataSet) AddSql(sql string) *DataSet {
 }
 
 func (ds *DataSet) AddMasterSource(dataSet *DataSet) *DataSet {
-	ds.MasterSouce.AddMasterSource(dataSet)
+	ds.MasterSource.AddMasterSource(dataSet)
 	return ds
 }
 
 func (ds *DataSet) AddDetailFields(fields ...string) *DataSet {
-	ds.MasterSouce.AddDetailFields(fields...)
+	ds.MasterSource.AddDetailFields(fields...)
 	return ds
 }
 
 func (ds *DataSet) AddMasterFields(fields ...string) *DataSet {
-	ds.MasterSouce.AddMasterFields(fields...)
+	ds.MasterSource.AddMasterFields(fields...)
+	return ds
+}
+
+func (ds *DataSet) ClearDetailFields(fields ...string) *DataSet {
+	ds.MasterSource.ClearDetailFields()
+	return ds
+}
+
+func (ds *DataSet) ClearMasterFields(fields ...string) *DataSet {
+	ds.MasterSource.ClearMasterFields()
 	return ds
 }
 
