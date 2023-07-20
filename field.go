@@ -95,6 +95,10 @@ func (field Field) IsNotNull() bool {
 }
 
 func (field Field) getVariant() Variant {
-	index := field.Owner.Owner.Index
-	return field.Owner.Owner.Rows[index].List[strings.ToUpper(field.Name)]
+	if len(field.Owner.Owner.Rows) > 0 {
+		index := field.Owner.Owner.Index
+		return field.Owner.Owner.Rows[index].List[strings.ToUpper(field.Name)]
+	} else {
+		return Variant{}
+	}
 }

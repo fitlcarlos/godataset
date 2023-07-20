@@ -18,15 +18,15 @@ func TestGodata(t *testing.T) {
 	defer db.Close()
 
 	ds := NewDataSet(db)
-	//err = ds.
-	//	AddSql("SELECT DESCRICAO FROM FAB_PROCESSO").
-	//	AddSql("WHERE ID BETWEEN :idini AND :idfim").
-	//	SetInputParam("idini", 20).
-	//	SetInputParam("idfim", 100).
-	//	Open()
-
-	err = ds.AddSql("SELECT UCID FROM MERCEDES_INT_SF_CLIENTE WHERE UCID = '300013800723549EDBB'").
+	err = ds.
+		AddSql("SELECT DESCRICAO FROM FAB_PROCESSO").
+		AddSql("WHERE ID BETWEEN :idini AND :idfim").
+		SetInputParam("idini", 20).
+		SetInputParam("idfim", 100).
 		Open()
+
+	//err = ds.AddSql("SELECT UCID FROM MERCEDES_INT_SF_CLIENTE WHERE UCID = '300013800723549EDBB'").
+	//	Open()
 
 	if err != nil {
 		t.Fatal(err)
@@ -34,9 +34,11 @@ func TestGodata(t *testing.T) {
 
 	ds.First()
 	for !ds.Eof() {
-		t.Log(ds.FieldByName("UCID").AsString())
+		t.Log(ds.FieldByName("DESCRICAO").AsString())
 		ds.Next()
 	}
+
+	//t.Log(ds.FieldByName("UCID").AsString())
 }
 
 func TestDataSetToStruct(t *testing.T) {
