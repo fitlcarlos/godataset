@@ -103,7 +103,7 @@ func (co *Conn) CreateContext(ctx context.Context) (context.Context, context.Can
 }
 
 func (co *Conn) StartTransaction() error {
-	if co.tx != nil {
+	if co.tx == nil {
 		t, err := co.DB.Begin()
 		if err != nil {
 			return err
@@ -111,7 +111,6 @@ func (co *Conn) StartTransaction() error {
 		co.tx = t
 	}
 	return nil
-
 }
 func (co *Conn) Commit() error {
 	err := co.tx.Commit()
