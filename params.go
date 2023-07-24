@@ -16,6 +16,7 @@ func NewParams() *Params {
 	}
 	return value
 }
+
 func (p *Params) ParamByName(paramName string) Param {
 	return p.List[paramName]
 }

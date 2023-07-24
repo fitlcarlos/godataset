@@ -157,10 +157,13 @@ func TestDataSetToSInsert(t *testing.T) {
 	defer db.Close()
 
 	ds := NewDataSet(db)
+
+	ds.Connection.StartTransaction()
 	_, _ = ds.
 		AddSql("INSERT INTO TESTE (ID_CODIGO_TESTE) VALUES (:ID_CODIGO_TESTE)").
 		SetInputParam("ID_CODIGO_TESTE", 100).
 		Exec()
+	ds.Connection.Commit()
 }
 
 func TestDataSetToSInsertReturn(t *testing.T) {

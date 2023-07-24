@@ -121,15 +121,27 @@ func (ds *DataSet) Exec() (sql.Result, error) {
 		ds.PrintParam()
 	}
 
-	stmt, err := ds.Connection.DB.Prepare(sql)
+	if ds.Connection.tx != nil {
+		stmt, err := ds.Connection.tx.Prepare(sql)
 
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
+
+		defer stmt.Close()
+
+		return stmt.Exec(ds.GetParams()...)
+	} else {
+		stmt, err := ds.Connection.DB.Prepare(sql)
+
+		if err != nil {
+			return nil, err
+		}
+
+		defer stmt.Close()
+
+		return stmt.Exec(ds.GetParams()...)
 	}
-
-	defer stmt.Close()
-
-	return stmt.Exec(ds.GetParams()...)
 }
 
 func (ds *DataSet) Delete() (int64, error) {
