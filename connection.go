@@ -128,8 +128,6 @@ func (co *Conn) Exec(sql string, arg ...any) (sql.Result, error) {
 
 func (co *Conn) Close() {
 	if err := co.DB.Close(); err != nil {
-		fmt.Printf("could not close the database connection %v\n", err)
 		return
 	}
-	fmt.Printf("database connection released succesfully")
 }
