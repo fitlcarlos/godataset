@@ -61,6 +61,13 @@ func (p *Params) SetOutputParam(paramName string, paramType any) *Params {
 	return p
 }
 
+func (p *Params) SetOutputParamSlice(params ...Param) *Params {
+	for i := 0; i < len(params); i++ {
+		p.SetOutputParam(params[i].Name, params[i].ParamType)
+	}
+	return p
+}
+
 func (p *Params) PrintParam() {
 	for key, value := range p.List {
 		fmt.Println("Colum:", key, "Value:", value.AsValue(), "Type:", reflect.TypeOf(value.AsValue()))

@@ -277,6 +277,11 @@ func (ds *DataSet) SetOutputParam(paramName string, paramType any) *DataSet {
 	return ds
 }
 
+func (ds *DataSet) SetOutputParamSlice(params ...Param) *DataSet {
+	ds.Params.SetOutputParamSlice(params...)
+	return ds
+}
+
 func (ds *DataSet) SetMacro(macroName string, macroValue any) *DataSet {
 	ds.Macros[macroName] = Macro{Value: Variant{Value: macroValue}}
 	return ds
