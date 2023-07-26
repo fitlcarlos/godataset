@@ -277,7 +277,7 @@ func (ds *DataSet) SetOutputParam(paramName string, paramType any) *DataSet {
 	return ds
 }
 
-func (ds *DataSet) SetOutputParamSlice(params ...Param) *DataSet {
+func (ds *DataSet) SetOutputParamSlice(params ...ParamOut) *DataSet {
 	ds.Params.SetOutputParamSlice(params...)
 	return ds
 }

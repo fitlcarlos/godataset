@@ -61,9 +61,9 @@ func (p *Params) SetOutputParam(paramName string, paramType any) *Params {
 	return p
 }
 
-func (p *Params) SetOutputParamSlice(params ...Param) *Params {
+func (p *Params) SetOutputParamSlice(params ...ParamOut) *Params {
 	for i := 0; i < len(params); i++ {
-		p.SetOutputParam(params[i].Name, params[i].ParamType)
+		p.SetOutputParam(params[i].name, params[i].dest)
 	}
 	return p
 }
