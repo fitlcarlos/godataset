@@ -371,6 +371,24 @@ func (ds *DataSet) Next() {
 	}
 }
 
+func (ds *DataSet) Previous() {
+	if !ds.Bof() {
+		ds.Index--
+		ds.Recno--
+	}
+}
+
+func (ds *DataSet) Last() {
+	if !ds.Eof() {
+		ds.Index = ds.Count()
+		ds.Recno = ds.Count() + 1
+	}
+}
+
+func (ds *DataSet) Bof() bool {
+	return ds.Count() == 0 || ds.Recno == 1
+}
+
 func (ds *DataSet) Eof() bool {
 	return ds.Count() == 0 || ds.Recno > ds.Count()
 }
