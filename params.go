@@ -40,23 +40,23 @@ func (p *Params) SetInputParam(paramName string, paramValue any) *Params {
 	return p
 }
 
-func (p *Params) SetOutputParam(paramName string, paramType any) *Params {
-	switch paramType.(type) {
+func (p *Params) SetOutputParam(paramName string, paramValue any) *Params {
+	switch paramValue.(type) {
 	case int, int8, int16, int32, int64:
-		dataType := int64(0)
-		p.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		value := int64(0)
+		p.List[paramName] = Param{Value: Variant{Value: &value}, ParamType: OUT}
 	case float32:
-		dataType := float32(0)
-		p.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		value := float32(0)
+		p.List[paramName] = Param{Value: Variant{Value: &value}, ParamType: OUT}
 	case float64:
-		dataType := float64(0)
-		p.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		value := float64(0)
+		p.List[paramName] = Param{Value: Variant{Value: &value}, ParamType: OUT}
 	case string:
-		dataType := generateString()
-		p.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		value := generateString()
+		p.List[paramName] = Param{Value: Variant{Value: &value}, ParamType: OUT}
 	default:
-		dataType := float64(0)
-		p.List[paramName] = Param{Value: Variant{Value: &dataType}, DataType: reflect.TypeOf(dataType), ParamType: OUT}
+		value := float64(0)
+		p.List[paramName] = Param{Value: Variant{Value: &value}, ParamType: OUT}
 	}
 	return p
 }

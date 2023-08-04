@@ -181,16 +181,16 @@ func TestDataSetToSInsertReturn(t *testing.T) {
 	ds := NewDataSet(db)
 
 	_, err = ds.
-		AddSql("INSERT INTO TESTE (ID_CODIGO_TESTE, DESCRICAO) VALUES (:ID_CODIGO_TESTE, :DESCRICAO)").
-		AddSql("RETURNING ID_CODIGO_TESTE, DESCRICAO INTO :OUT_ID_CODIGO_TESTE, :OUT_DESCRICAO").
-		SetInputParam("ID_CODIGO_TESTE", 132).
-		SetInputParam("DESCRICAO", "INSERT TEST").
-		SetOutputParam("OUT_ID_CODIGO_TESTE", int64(0)).
-		SetOutputParam("OUT_DESCRICAO", "").
+		AddSql("INSERT INTO TESTE (ID_CODIGO_TESTE, DESCRICAO) VALUES (161, 'INSERT TEST')").
+		AddSql("RETURNING ID_CODIGO_TESTE INTO :ID").
+		//SetInputParam("ABC", 1).
+		//SetInputParam("DESCRICAO", "INSERT TEST").
+		SetOutputParam("ID", int64(0)).
+		//SetOutputParam("OUT_DESCRICAO", "").
 		Exec()
 
-	fmt.Println("ID:", ds.ParamByName("OUT_ID_CODIGO_TESTE").AsInt64())
-	fmt.Println("Descrição", ds.ParamByName("OUT_DESCRICAO").AsString())
+	fmt.Println("ID:", ds.ParamByName("ID").AsInt64())
+	//fmt.Println("Descrição", ds.ParamByName("OUT_DESCRICAO").AsString())
 }
 
 func TestDataSetMasterDetail(t *testing.T) {

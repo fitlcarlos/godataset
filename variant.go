@@ -72,15 +72,15 @@ func (v Variant) AsInt8() int8 {
 	case nil:
 		return int8(0)
 	case int:
-		return int8(v.Value.(int))
+		return int8(val)
 	case int8:
-		return v.Value.(int8)
+		return val
 	case int16:
-		return int8(v.Value.(int16))
+		return int8(val)
 	case int32:
-		return int8(v.Value.(int32))
+		return int8(val)
 	case int64:
-		return int8(v.Value.(int64))
+		return int8(val)
 	case string:
 		int8Value, err := strconv.ParseInt(val, 10, 8)
 		if err != nil {
@@ -101,15 +101,15 @@ func (v Variant) AsInt16() int16 {
 	case nil:
 		return int16(0)
 	case int:
-		return int16(v.Value.(int))
+		return int16(val)
 	case int8:
-		return int16(v.Value.(int8))
+		return int16(val)
 	case int16:
-		return v.Value.(int16)
+		return val
 	case int32:
-		return int16(v.Value.(int32))
+		return int16(val)
 	case int64:
-		return int16(v.Value.(int64))
+		return int16(val)
 	case string:
 		int16Value, err := strconv.ParseInt(val, 10, 16)
 		if err != nil {
@@ -130,15 +130,19 @@ func (v Variant) AsInt32() int32 {
 	case nil:
 		return int32(0)
 	case int:
-		return int32(v.Value.(int))
+		return int32(val)
 	case int8:
-		return int32(v.Value.(int8))
+		return int32(val)
 	case int16:
-		return int32(v.Value.(int16))
+		return int32(val)
 	case int32:
-		return v.Value.(int32)
+		return val
 	case int64:
-		return int32(v.Value.(int64))
+		return int32(val)
+	case float32:
+		return int32(val)
+	case float64:
+		return int32(val)
 	case string:
 		int32Value, err := strconv.ParseInt(val, 10, 32)
 		if err != nil {
@@ -168,6 +172,10 @@ func (v Variant) AsInt64() int64 {
 		return int64(val)
 	case int64:
 		return val
+	case float32:
+		return int64(val)
+	case float64:
+		return int64(val)
 	case string:
 		int64Value, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {

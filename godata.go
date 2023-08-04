@@ -214,7 +214,7 @@ func (ds *DataSet) GetParams() []any {
 		case IN:
 			param = append(param, sql.Named(key, prm.Value.Value))
 		case OUT:
-			param = append(param, sql.Named(key, sql.Out{Dest: prm.Value.Value, In: false}))
+			param = append(param, sql.Named(key, sql.Out{Dest: prm.Value.Value}))
 		case INOUT:
 			param = append(param, sql.Named(key, sql.Out{Dest: prm.Value.Value, In: true}))
 		}
@@ -272,8 +272,8 @@ func (ds *DataSet) SetInputParam(paramName string, paramValue any) *DataSet {
 	return ds
 }
 
-func (ds *DataSet) SetOutputParam(paramName string, paramType any) *DataSet {
-	ds.Params.SetOutputParam(paramName, paramType)
+func (ds *DataSet) SetOutputParam(paramName string, paramValue any) *DataSet {
+	ds.Params.SetOutputParam(paramName, paramValue)
 	return ds
 }
 
