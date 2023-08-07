@@ -173,7 +173,7 @@ func (ds *DataSet) GetSql() (sql string) {
 		}
 	}
 
-	sql = strings.Replace(sql, "\r", "\n ", -1)
+	sql = strings.Replace(sql, "\r", "\n", -1)
 	sql = strings.Replace(sql, "\n", "\n ", -1)
 
 	return sql
@@ -207,7 +207,7 @@ func (ds *DataSet) GetSqlMasterDetail() (sql string) {
 		}
 	}
 
-	sql = strings.Replace(sql, "\r", "\n ", -1)
+	sql = strings.Replace(sql, "\r", "\n", -1)
 	sql = strings.Replace(sql, "\n", "\n ", -1)
 
 	return sql
