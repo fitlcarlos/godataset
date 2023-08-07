@@ -325,7 +325,7 @@ func (ds *DataSet) CreateFields() error {
 }
 
 func (ds *DataSet) Prepare() {
-	re := regexp.MustCompile(`:(\w+)`)
+	re := regexp.MustCompile(` :(\w+)`)
 	matches := re.FindAllStringSubmatch(ds.GetSql(), -1)
 
 	for _, match := range matches {
