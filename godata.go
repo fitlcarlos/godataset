@@ -172,10 +172,10 @@ func (ds *DataSet) GetSql() (sql string) {
 			sql = strings.ReplaceAll(sql, "&"+key, mrc.Value.AsString())
 		}
 	}
-	//Nao remover o espaco do \n colocado abaixo ele evita um pequeno congelamento
-	//nao sei porque acontece mas acontece nao remover...
+
 	sql = strings.Replace(sql, "\r", "\n", -1)
 	sql = strings.Replace(sql, "\n", "\n ", -1)
+
 	return sql
 }
 
