@@ -7,27 +7,27 @@ import (
 )
 
 type Params struct {
-	List map[string]Param
+	List map[string]*Param
 }
 
 func NewParams() *Params {
 	value := &Params{
-		List: make(map[string]Param),
+		List: make(map[string]*Param),
 	}
 	return value
 }
 
-func (p *Params) ParamByName(paramName string) Param {
+func (p *Params) ParamByName(paramName string) *Param {
 	return p.List[paramName]
 }
 
-func (p *Params) Add(paramName string) Param {
+func (p *Params) Add(paramName string) *Param {
 	param := p.ParamByName(paramName)
 
 	if &param != nil {
 		return param
 	} else {
-		param = Param{
+		param = &Param{
 			Name: paramName,
 		}
 		p.List[strings.ToUpper(paramName)] = param
@@ -36,7 +36,7 @@ func (p *Params) Add(paramName string) Param {
 }
 
 func (p *Params) SetInputParam(paramName string, paramValue any) *Params {
-	p.List[paramName] = Param{Value: Variant{Value: paramValue}, ParamType: IN}
+	p.List[paramName] = &Param{Value: &Variant{Value: paramValue}, ParamType: IN}
 	return p
 }
 
@@ -44,19 +44,19 @@ func (p *Params) SetOutputParam(paramName string, paramValue any) *Params {
 	switch paramValue.(type) {
 	case int, int8, int16, int32, int64:
 		value := int64(0)
-		p.List[paramName] = Param{Value: Variant{Value: &value}, ParamType: OUT}
+		p.List[paramName] = &Param{Value: &Variant{Value: &value}, ParamType: OUT}
 	case float32:
 		value := float32(0)
-		p.List[paramName] = Param{Value: Variant{Value: &value}, ParamType: OUT}
+		p.List[paramName] = &Param{Value: &Variant{Value: &value}, ParamType: OUT}
 	case float64:
 		value := float64(0)
-		p.List[paramName] = Param{Value: Variant{Value: &value}, ParamType: OUT}
+		p.List[paramName] = &Param{Value: &Variant{Value: &value}, ParamType: OUT}
 	case string:
 		value := generateString()
-		p.List[paramName] = Param{Value: Variant{Value: &value}, ParamType: OUT}
+		p.List[paramName] = &Param{Value: &Variant{Value: &value}, ParamType: OUT}
 	default:
 		value := float64(0)
-		p.List[paramName] = Param{Value: Variant{Value: &value}, ParamType: OUT}
+		p.List[paramName] = &Param{Value: &Variant{Value: &value}, ParamType: OUT}
 	}
 	return p
 }

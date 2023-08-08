@@ -172,10 +172,8 @@ func (ds *DataSet) GetSql() (sql string) {
 			sql = strings.ReplaceAll(sql, "&"+key, mrc.Value.AsString())
 		}
 	}
-
 	sql = strings.Replace(sql, "\r", "\n", -1)
 	sql = strings.Replace(sql, "\n", "\n ", -1)
-
 	return sql
 }
 
@@ -206,8 +204,7 @@ func (ds *DataSet) GetSqlMasterDetail() (sql string) {
 			fmt.Println("MasterFields or DetailFields field cannot be empty")
 		}
 	}
-	//Nao remover o espaco do \n colocado abaixo ele evita um pequeno congelamento
-	//nao sei porque acontece mas acontece nao remover...
+
 	sql = strings.Replace(sql, "\r", "\n", -1)
 	sql = strings.Replace(sql, "\n", "\n ", -1)
 	return sql
@@ -269,7 +266,7 @@ func (ds *DataSet) scan(list *sql.Rows) {
 	}
 }
 
-func (ds *DataSet) ParamByName(paramName string) Param {
+func (ds *DataSet) ParamByName(paramName string) *Param {
 	return ds.Params.ParamByName(paramName)
 }
 
@@ -331,9 +328,9 @@ func (ds *DataSet) Prepare() {
 	for _, match := range matches {
 		paramName := match[1]
 
-		param := Param{
+		param := &Param{
 			Name:  paramName,
-			Value: Variant{Value: ""},
+			Value: &Variant{Value: ""},
 		}
 		ds.Params.List[paramName] = param
 	}

@@ -16,21 +16,21 @@ const (
 type Value interface{ *Variant | Variant }
 type Param struct {
 	Name      string
-	Value     Variant
+	Value     *Variant
 	ParamType ParamType
 	DataType  reflect.Type
 }
 
-func NewParam(paramName string, paramType ParamType) Param {
-	return Param{
+func NewParam(paramName string, paramType ParamType) *Param {
+	return &Param{
 		Name:      paramName,
 		ParamType: paramType,
 	}
 }
-func (param Param) AsValue() Variant {
+func (param Param) AsValue() *Variant {
 	if IsPointer(param.Value.Value) {
 		a := reflect.ValueOf(param.Value.Value).Elem().Interface()
-		return Variant{Value: a}
+		return &Variant{Value: a}
 	} else {
 		return param.Value
 	}
