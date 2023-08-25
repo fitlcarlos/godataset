@@ -239,7 +239,7 @@ func (ds *DataSet) scan(list *sql.Rows) {
 	for list.Next() {
 		columns := make([]any, len(fields))
 
-		for i := range columns {
+		for i := 0; i < len(columns); i++ {
 			columns[i] = &columns[i]
 		}
 
@@ -251,14 +251,14 @@ func (ds *DataSet) scan(list *sql.Rows) {
 
 		row := NewRow()
 
-		for i, value := range columns {
+		for i := 0; i < len(columns); i++ {
 			field := ds.Fields.Add(fields[i])
 			field.DataType = fieldTypes[i]
 			field.Order = i + 1
 			field.Index = i
 
 			row.List[strings.ToUpper(fields[i])] = Variant{
-				Value: value,
+				Value: columns[i],
 			}
 		}
 
@@ -557,20 +557,30 @@ func (ds *DataSet) GetValue(field *Field, fieldType any) any {
 func (ds *DataSet) toStructList(modelValue reflect.Value) error {
 	var modelType reflect.Type
 
-	if modelValue.Type().Kind() == reflect.Pointer {
-		modelType = modelValue.Type().Elem().Elem()
-		modelValue = modelValue.Elem()
+	if modelValue.Type().Elem().Kind() == reflect.Pointer {
+		modelType = modelValue.Type().Elem()
 	} else {
 		modelType = modelValue.Type().Elem()
 	}
 
 	for !ds.Eof() {
-		var newModel reflect.Value
+		//var newModel reflect.Value
 
-		newModel = reflect.New(modelType)
+		newModel := reflect.New(modelType)
+
+		if modelValue.Type().Elem().Kind() == reflect.Pointer {
+			err := ds.toStructUniqResult(reflect.ValueOf(newModel.Interface()).Elem())
+			if err != nil {
+				return err
+			}
+		} else {
+			err := ds.toStructUniqResult(reflect.ValueOf(newModel.Interface()).Elem())
+			if err != nil {
+				return err
+			}
+		}
 
 		err := ds.toStructUniqResult(reflect.ValueOf(newModel.Interface()).Elem())
-
 		if err != nil {
 			return err
 		}

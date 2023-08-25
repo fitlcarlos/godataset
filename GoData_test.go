@@ -38,6 +38,8 @@ func TestGodata(t *testing.T) {
 		ds.Next()
 	}
 
+	ds.Close()
+
 	//t.Log(ds.FieldByName("UCID").AsString())
 }
 
