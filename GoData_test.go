@@ -3,6 +3,7 @@ package godata
 import (
 	"fmt"
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
+	go_ora "github.com/sijms/go-ora/v2"
 	"testing"
 )
 
@@ -324,4 +325,35 @@ func TestDataSetParseSql(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestResultSetCLob(t *testing.T) {
+
+	connectStr := "oracle://nbsama:new@100.0.65.224:1521/fab"
+
+	db, err := NewConnection(DialectType(ORACLE), connectStr)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer db.Close()
+
+	ds := NewDataSet(db)
+
+	json := "teste clob"
+	_, err = ds.
+		AddSql("INSERT INTO fab_mov_art_rena_ards (arquivo)").
+		AddSql("values (:arquivo) returning id into :out_id").
+		SetInputParam("arquivo", go_ora.Clob{String: (json)}).
+		SetOutputParam("out_id", int64(0)).
+		Exec()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id := ds.ParamByName("out_id").AsInt64()
+
+	t.Log(id)
 }

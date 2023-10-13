@@ -10,18 +10,23 @@ import (
 )
 
 type Conn struct {
-	DB          *sql.DB
-	tx          *sql.Tx
-	Dialect     DialectType
-	DSN         string
-	maxLifetime time.Duration
-	log         bool
+	DB           *sql.DB
+	tx           *sql.Tx
+	Dialect      DialectType
+	DSN          string
+	log          bool
+	PoolSize     int
+	PoolLifetime time.Duration
+	MaxOpenConns int
+	ConnLifetime time.Duration
+	connContext  bool
 }
 
 func NewConnection(dialect DialectType, dsn string) (*Conn, error) {
 	conn := &Conn{
-		Dialect: dialect,
-		DSN:     dsn,
+		Dialect:  dialect,
+		DSN:      dsn,
+		PoolSize: 20,
 	}
 
 	err := conn.Open()
@@ -71,6 +76,10 @@ func (co *Conn) DisableLog() {
 
 func (co *Conn) Open() error {
 	db, err := sql.Open(co.Dialect.String(), co.DSN)
+	db.SetMaxIdleConns(co.PoolSize)
+	db.SetMaxOpenConns(co.MaxOpenConns)
+	db.SetConnMaxIdleTime(co.PoolLifetime)
+	db.SetConnMaxLifetime(co.ConnLifetime)
 
 	if err != nil {
 		return fmt.Errorf("could not create a connection: %w", err)
@@ -81,12 +90,36 @@ func (co *Conn) Open() error {
 	}
 
 	co.DB = db
+	co.connContext = false
 
 	return nil
 }
 
-func (co *Conn) SetConnMaxLifeTime(d time.Duration) {
-	co.maxLifetime = d
+// SetSizePool
+// Tamanho maximo do Pool de conexão
+func (co *Conn) SetSizePool(n int) {
+	co.PoolSize = n
+	co.DB.SetMaxIdleConns(n)
+}
+
+// SetPoolLifeTime
+// Tempo de vida do Pool de conexões
+func (co *Conn) SetPoolLifeTime(d time.Duration) {
+	co.PoolLifetime = d
+	co.DB.SetConnMaxIdleTime(d)
+}
+
+// SetMaxOpenConns
+// Maximo de conexões abertas
+func (co *Conn) SetMaxOpenConns(n int) {
+	co.MaxOpenConns = n
+	co.DB.SetMaxOpenConns(n)
+}
+
+// SetConnLifeTime
+// Tempo de vida das conexões
+func (co *Conn) SetConnLifeTime(d time.Duration) {
+	co.ConnLifetime = d
 	co.DB.SetConnMaxLifetime(d)
 }
 
@@ -105,6 +138,23 @@ func (co *Conn) CreateContext(ctx context.Context) (context.Context, context.Can
 func (co *Conn) StartTransaction() error {
 	if co.tx == nil {
 		t, err := co.DB.Begin()
+		if err != nil {
+			return err
+		}
+		co.tx = t
+	}
+	return nil
+}
+
+func (co *Conn) StartTransactionContext(ctx context.Context) error {
+	if co.tx == nil {
+
+		opts := &sql.TxOptions{
+			Isolation: sql.LevelDefault,
+			ReadOnly:  false,
+		}
+
+		t, err := co.DB.BeginTx(ctx, opts)
 		if err != nil {
 			return err
 		}

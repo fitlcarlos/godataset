@@ -1,10 +1,12 @@
 package godata
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
+	go_ora "github.com/sijms/go-ora/v2"
 	"reflect"
 	"regexp"
 	"strings"
@@ -101,6 +103,45 @@ func (ds *DataSet) Open() error {
 	return nil
 }
 
+func (ds *DataSet) OpenContext(context context.Context) error {
+	ds.Rows = nil
+	ds.Index = 0
+	ds.Recno = 0
+
+	if len(ds.Fields.List) == 0 {
+		ds.CreateFields()
+	}
+
+	sql := ds.GetSqlMasterDetail()
+
+	if ds.Connection.log {
+		fmt.Println(sql)
+		ds.PrintParam()
+	}
+
+	rows, err := ds.Connection.DB.QueryContext(context, sql, ds.GetParams()...)
+
+	if err != nil {
+		errPing := ds.Connection.DB.PingContext(context)
+		if errPing != nil {
+			errConn := ds.Connection.Open()
+			if errConn != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("could not open dataset %v\n", err)
+		}
+	}
+
+	defer rows.Close()
+
+	ds.scan(rows)
+
+	ds.First()
+
+	return nil
+}
+
 func (ds *DataSet) Close() {
 	ds.Sql.Clear()
 	ds.Fields = nil
@@ -144,8 +185,55 @@ func (ds *DataSet) Exec() (sql.Result, error) {
 	}
 }
 
+func (ds *DataSet) ExecContext(context context.Context) (sql.Result, error) {
+	sql := ds.GetSql()
+
+	if ds.Connection.log {
+		fmt.Println(sql)
+		ds.PrintParam()
+	}
+
+	if ds.Connection.tx != nil {
+		stmt, err := ds.Connection.tx.PrepareContext(context, sql)
+
+		if err != nil {
+			return nil, err
+		}
+
+		defer stmt.Close()
+
+		return stmt.Exec(ds.GetParams()...)
+	} else {
+		stmt, err := ds.Connection.DB.PrepareContext(context, sql)
+
+		if err != nil {
+			return nil, err
+		}
+
+		defer stmt.Close()
+
+		return stmt.ExecContext(context, ds.GetParams()...)
+	}
+}
+
 func (ds *DataSet) Delete() (int64, error) {
 	result, err := ds.Exec()
+
+	if err != nil {
+		return 0, err
+	}
+
+	rowsAff, err := result.RowsAffected()
+
+	if err != nil {
+		return 0, err
+	}
+
+	return rowsAff, nil
+}
+
+func (ds *DataSet) DeleteContext(context context.Context) (int64, error) {
+	result, err := ds.ExecContext(context)
 
 	if err != nil {
 		return 0, err
@@ -275,6 +363,16 @@ func (ds *DataSet) SetInputParam(paramName string, paramValue any) *DataSet {
 	return ds
 }
 
+func (ds *DataSet) SetInputParamClob(paramName string, paramValue string) *DataSet {
+	ds.Params.SetInputParam(paramName, go_ora.Clob{String: paramValue})
+	return ds
+}
+
+func (ds *DataSet) SetInputParamBlob(paramName string, paramValue []byte) *DataSet {
+	ds.Params.SetInputParam(paramName, go_ora.Blob{Data: paramValue})
+	return ds
+}
+
 func (ds *DataSet) SetOutputParam(paramName string, paramValue any) *DataSet {
 	ds.Params.SetOutputParam(paramName, paramValue)
 	return ds
@@ -341,7 +439,6 @@ func (ds *DataSet) FieldByName(fieldName string) *Field {
 }
 
 func (ds *DataSet) Locate(key string, value any) bool {
-
 	ds.First()
 	for ds.Eof() == false {
 		switch value.(type) {
