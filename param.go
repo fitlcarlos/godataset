@@ -15,6 +15,7 @@ const (
 
 type Value interface{ *Variant | Variant }
 type Param struct {
+	Owner     *Params
 	Name      string
 	Value     *Variant
 	ParamType ParamType
@@ -28,6 +29,10 @@ func NewParam(paramName string, paramType ParamType) *Param {
 	}
 }
 func (param *Param) AsValue() *Variant {
+	if param.Value == nil {
+		return &Variant{}
+	}
+
 	if param.Value.Value == nil {
 		return param.Value
 	}

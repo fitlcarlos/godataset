@@ -10,39 +10,18 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 	"unsafe"
 )
 
-type DS interface {
-	NewDataSet(db *Conn) *DataSet
-	Open() error
-	Close()
-	Exec() (sql.Result, error)
-	GetSql() (sql string)
-	GetParams() []any
-	Scan(list *sql.Rows)
-	ParamByName(paramName string) Param
-	SetInputParam(paramName string, paramValue any) *DataSet
-	SetOutputParam(paramName string, paramType any) *DataSet
-	FieldByName(fieldName string) Field
-	Locate(key string, value any) bool
-	First()
-	Next()
-	Eof() bool
-	IsEmpty() bool
-	IsNotEmpty() bool
-	Count() int
-	AddSql(sql string) *DataSet
-	ToStruct(model any) error
-}
-
 type DataSet struct {
 	Connection      *Conn
+	Tx              *sql.Tx
 	Sql             Strings
 	Fields          *Fields
-	Rows            []Row
 	Params          *Params
-	Macros          Macros
+	Macros          *Macros
+	Rows            []Row
 	Index           int
 	Recno           int
 	MasterSource    *MasterSource
@@ -56,7 +35,22 @@ func NewDataSet(db *Conn) *DataSet {
 		Recno:        0,
 		Fields:       NewFields(),
 		Params:       NewParams(),
-		Macros:       make(Macros),
+		Macros:       NewMacros(),
+		MasterSource: NewMasterSource(),
+	}
+	ds.Fields.Owner = ds
+
+	return ds
+}
+
+func NewDataSetTx(tx *sql.Tx) *DataSet {
+	ds := &DataSet{
+		Tx:           tx,
+		Index:        0,
+		Recno:        0,
+		Fields:       NewFields(),
+		Params:       NewParams(),
+		Macros:       NewMacros(),
 		MasterSource: NewMasterSource(),
 	}
 	ds.Fields.Owner = ds
@@ -143,15 +137,21 @@ func (ds *DataSet) OpenContext(context context.Context) error {
 }
 
 func (ds *DataSet) Close() {
-	ds.Sql.Clear()
-	ds.Fields = nil
-	ds.Rows = nil
-	ds.Params = nil
-	ds.Macros = nil
 	ds.Index = 0
 	ds.Recno = 0
+	ds.Sql.Clear()
+	ds.Rows = nil
+	ds.Fields = nil
+	ds.Params = nil
+	ds.Macros = nil
 	ds.MasterSource = nil
 	ds.IndexFieldNames = ""
+
+	ds.Fields = NewFields()
+	ds.Params = NewParams()
+	ds.Macros = NewMacros()
+	ds.MasterSource = NewMasterSource()
+	ds.Fields.Owner = ds
 }
 
 func (ds *DataSet) Exec() (sql.Result, error) {
@@ -162,8 +162,8 @@ func (ds *DataSet) Exec() (sql.Result, error) {
 		ds.PrintParam()
 	}
 
-	if ds.Connection.tx != nil {
-		stmt, err := ds.Connection.tx.Prepare(sql)
+	if ds.Tx != nil {
+		stmt, err := ds.Tx.Prepare(sql)
 
 		if err != nil {
 			return nil, err
@@ -188,13 +188,15 @@ func (ds *DataSet) Exec() (sql.Result, error) {
 func (ds *DataSet) ExecContext(context context.Context) (sql.Result, error) {
 	sql := ds.GetSql()
 
-	if ds.Connection.log {
-		fmt.Println(sql)
-		ds.PrintParam()
+	if ds.Connection != nil {
+		if ds.Connection.log {
+			fmt.Println(sql)
+			ds.PrintParam()
+		}
 	}
 
-	if ds.Connection.tx != nil {
-		stmt, err := ds.Connection.tx.PrepareContext(context, sql)
+	if ds.Tx != nil {
+		stmt, err := ds.Tx.PrepareContext(context, sql)
 
 		if err != nil {
 			return nil, err
@@ -252,12 +254,15 @@ func (ds *DataSet) GetSql() (sql string) {
 
 	sql = ds.Sql.Text()
 
-	for key, mrc := range ds.Macros {
-		value := reflect.ValueOf(mrc.Value.Value)
+	for i := 0; i < len(ds.Macros.List); i++ {
+		key := ds.Macros.List[i].Name
+		variant := ds.Macros.List[i].Value
+
+		value := reflect.ValueOf(variant.Value)
 		if value.Kind() == reflect.Slice || value.Kind() == reflect.Array {
-			sql = strings.ReplaceAll(sql, "&"+key, JoinSlice(mrc.Value.AsValue()))
+			sql = strings.ReplaceAll(sql, "&"+key, JoinSlice(variant.AsValue()))
 		} else {
-			sql = strings.ReplaceAll(sql, "&"+key, mrc.Value.AsString())
+			sql = strings.ReplaceAll(sql, "&"+key, variant.AsString())
 		}
 	}
 	sql = strings.Replace(sql, "\r", "\n", -1)
@@ -300,14 +305,18 @@ func (ds *DataSet) GetSqlMasterDetail() (sql string) {
 
 func (ds *DataSet) GetParams() []any {
 	var param []any
-	for key, prm := range ds.Params.List {
-		switch prm.ParamType {
+
+	for i := 0; i < len(ds.Params.List); i++ {
+		key := ds.Params.List[i].Name
+		value := ds.Params.List[i].Value.Value
+
+		switch ds.Params.List[i].ParamType {
 		case IN:
-			param = append(param, sql.Named(key, prm.Value.Value))
+			param = append(param, sql.Named(key, value))
 		case OUT:
-			param = append(param, sql.Named(key, sql.Out{Dest: prm.Value.Value}))
+			param = append(param, sql.Named(key, sql.Out{Dest: value}))
 		case INOUT:
-			param = append(param, sql.Named(key, sql.Out{Dest: prm.Value.Value, In: true}))
+			param = append(param, sql.Named(key, sql.Out{Dest: value, In: true}))
 		}
 	}
 	return param
@@ -315,8 +324,11 @@ func (ds *DataSet) GetParams() []any {
 
 func (ds *DataSet) GetMacros() []any {
 	var macro []any
-	for key, mrc := range ds.Macros {
-		macro = append(macro, sql.Named(key, mrc.Value))
+	for i := 0; i < len(ds.Macros.List); i++ {
+		key := ds.Macros.List[i].Name
+		value := &ds.Macros.List[i].Value.Value
+
+		macro = append(macro, sql.Named(key, value))
 	}
 	return macro
 }
@@ -345,7 +357,7 @@ func (ds *DataSet) scan(list *sql.Rows) {
 			field.Order = i + 1
 			field.Index = i
 
-			row.List[strings.ToUpper(fields[i])] = Variant{
+			row.List[strings.ToUpper(fields[i])] = &Variant{
 				Value: columns[i],
 			}
 		}
@@ -356,6 +368,10 @@ func (ds *DataSet) scan(list *sql.Rows) {
 
 func (ds *DataSet) ParamByName(paramName string) *Param {
 	return ds.Params.ParamByName(paramName)
+}
+
+func (ds *DataSet) MacroByName(macroName string) *Macro {
+	return ds.Macros.MacroByName(macroName)
 }
 
 func (ds *DataSet) SetInputParam(paramName string, paramValue any) *DataSet {
@@ -384,7 +400,7 @@ func (ds *DataSet) SetOutputParamSlice(params ...ParamOut) *DataSet {
 }
 
 func (ds *DataSet) SetMacro(macroName string, macroValue any) *DataSet {
-	ds.Macros[macroName] = Macro{Value: Variant{Value: macroValue}}
+	ds.Macros.SetMacro(macroName, macroValue)
 	return ds
 }
 
@@ -430,8 +446,12 @@ func (ds *DataSet) Prepare() {
 			Name:  paramName,
 			Value: &Variant{Value: ""},
 		}
-		ds.Params.List[paramName] = param
+		ds.Params.List = append(ds.Params.List, param)
 	}
+}
+
+func (ds *DataSet) findFieldByName(fieldName string) *Field {
+	return ds.Fields.FindFieldByName(fieldName)
 }
 
 func (ds *DataSet) FieldByName(fieldName string) *Field {
@@ -661,8 +681,6 @@ func (ds *DataSet) toStructList(modelValue reflect.Value) error {
 	}
 
 	for !ds.Eof() {
-		//var newModel reflect.Value
-
 		newModel := reflect.New(modelType)
 
 		if modelValue.Type().Elem().Kind() == reflect.Pointer {
@@ -717,4 +735,33 @@ func generateString() string {
 
 func (ds *DataSet) ParseSql() (sqlparser.Statement, error) {
 	return sqlparser.Parse(ds.GetSql())
+}
+
+func limitStr(value string, limit int) string {
+	if len(value) > limit {
+		return value[:limit]
+	}
+	return value
+}
+
+func (ds *DataSet) SqlParam() string {
+	sql := ds.Sql.Text()
+	for i := 0; i < len(ds.Params.List); i++ {
+		key := ds.Params.List[i].Name
+		value := ds.Params.List[i].Value
+		switch val := value.Value.(type) {
+		case nil:
+			sql = strings.ReplaceAll(sql, ":"+key, "null")
+		case time.Time:
+			data := limitStr(value.AsString(), 19)
+			sql = strings.ReplaceAll(sql, ":"+key, "to_date('"+data+"','rrrr-mm-dd hh24:mi:ss')")
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+			sql = strings.ReplaceAll(sql, ":"+key, fmt.Sprintf("%v", val))
+		case float32, float64:
+			sql = strings.ReplaceAll(sql, ":"+key, fmt.Sprintf("%f", val))
+		case string:
+			sql = strings.ReplaceAll(sql, ":"+key, "'"+value.AsString()+"'")
+		}
+	}
+	return sql
 }

@@ -8,7 +8,7 @@ import (
 )
 
 func TestGodata(t *testing.T) {
-	connectStr := "oracle://nbsama:new@100.0.65.224:1521/fab"
+	connectStr := "oracle://erp:100651xpto@DESKTOP-AU8VNS3:1521/xe"
 
 	db, err := NewConnection(DialectType(ORACLE), connectStr)
 
@@ -20,7 +20,7 @@ func TestGodata(t *testing.T) {
 
 	ds := NewDataSet(db)
 	err = ds.
-		AddSql("SELECT DESCRICAO FROM FAB_PROCESSO").
+		AddSql("SELECT id, nome FROM pessoa").
 		AddSql("WHERE ID BETWEEN :idini AND :idfim").
 		SetInputParam("idini", 20).
 		SetInputParam("idfim", 100).
@@ -35,7 +35,7 @@ func TestGodata(t *testing.T) {
 
 	ds.First()
 	for !ds.Eof() {
-		t.Log(ds.FieldByName("DESCRICAO").AsString())
+		t.Log(ds.FieldByName("nome").AsString())
 		ds.Next()
 	}
 
@@ -159,14 +159,15 @@ func TestDataSetToSInsert(t *testing.T) {
 
 	defer db.Close()
 
-	ds := NewDataSet(db)
+	tx, err := db.StartTransaction()
 
-	ds.Connection.StartTransaction()
+	ds := NewDataSetTx(tx)
 	_, _ = ds.
 		AddSql("INSERT INTO TESTE (ID_CODIGO_TESTE) VALUES (:ID_CODIGO_TESTE)").
 		SetInputParam("ID_CODIGO_TESTE", 100).
 		Exec()
-	ds.Connection.Commit()
+
+	tx.Commit()
 }
 
 func TestDataSetToSInsertReturn(t *testing.T) {

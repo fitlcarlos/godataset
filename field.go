@@ -7,11 +7,10 @@ import (
 )
 
 type Field struct {
-	Owner    *Fields
-	Name     string
-	Caption  string
-	DataType *sql.ColumnType
-	//Value      variant
+	Owner      *Fields
+	Name       string
+	Caption    string
+	DataType   *sql.ColumnType
 	DataMask   string
 	BoolValue  bool
 	TrueValue  string
@@ -94,11 +93,21 @@ func (field Field) IsNotNull() bool {
 	return field.getVariant().IsNotNull()
 }
 
-func (field Field) getVariant() Variant {
-	if len(field.Owner.Owner.Rows) > 0 {
-		index := field.Owner.Owner.Index
-		return field.Owner.Owner.Rows[index].List[strings.ToUpper(field.Name)]
-	} else {
-		return Variant{}
+func (field Field) getVariant() *Variant {
+	var variant *Variant
+
+	if field.Owner != nil {
+		if field.Owner.Owner != nil {
+			if len(field.Owner.Owner.Rows) > 0 {
+				index := field.Owner.Owner.Index
+				variant = field.Owner.Owner.Rows[index].List[strings.ToUpper(field.Name)]
+			}
+		}
 	}
+
+	if variant == nil {
+		return &Variant{}
+	}
+
+	return variant
 }

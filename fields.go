@@ -1,6 +1,7 @@
 package godata
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -15,7 +16,8 @@ func NewFields() *Fields {
 	}
 	return fields
 }
-func (fd *Fields) FieldByName(fieldName string) *Field {
+
+func (fd *Fields) FindFieldByName(fieldName string) *Field {
 	for i := 0; i < len(fd.List); i++ {
 		if strings.ToUpper(fd.List[i].Name) == strings.ToUpper(fieldName) {
 			return fd.List[i]
@@ -24,8 +26,25 @@ func (fd *Fields) FieldByName(fieldName string) *Field {
 	return nil
 }
 
+func (fd *Fields) FieldByName(fieldName string) *Field {
+	var field *Field
+
+	for i := 0; i < len(fd.List); i++ {
+		if strings.ToUpper(fd.List[i].Name) == strings.ToUpper(fieldName) {
+			field = fd.List[i]
+		}
+	}
+
+	if field == nil {
+		field = &Field{}
+		fmt.Println("Field " + fieldName + " doesn't exists")
+	}
+
+	return field
+}
+
 func (fd *Fields) Add(fieldName string) *Field {
-	field := fd.FieldByName(fieldName)
+	field := fd.FindFieldByName(fieldName)
 
 	if field != nil {
 		return field

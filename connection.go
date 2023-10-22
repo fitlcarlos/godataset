@@ -76,14 +76,15 @@ func (co *Conn) DisableLog() {
 
 func (co *Conn) Open() error {
 	db, err := sql.Open(co.Dialect.String(), co.DSN)
-	db.SetMaxIdleConns(co.PoolSize)
-	db.SetMaxOpenConns(co.MaxOpenConns)
-	db.SetConnMaxIdleTime(co.PoolLifetime)
-	db.SetConnMaxLifetime(co.ConnLifetime)
 
 	if err != nil {
 		return fmt.Errorf("could not create a connection: %w", err)
 	}
+
+	db.SetMaxIdleConns(co.PoolSize)
+	db.SetMaxOpenConns(co.MaxOpenConns)
+	db.SetConnMaxIdleTime(co.PoolLifetime)
+	db.SetConnMaxLifetime(co.ConnLifetime)
 
 	if err = db.Ping(); err != nil {
 		return fmt.Errorf("database is not reachable: %w", err)
@@ -96,28 +97,28 @@ func (co *Conn) Open() error {
 }
 
 // SetSizePool
-// Tamanho maximo do Pool de conex„o
+// Tamanho maximo do Pool de conex√£o
 func (co *Conn) SetSizePool(n int) {
 	co.PoolSize = n
 	co.DB.SetMaxIdleConns(n)
 }
 
 // SetPoolLifeTime
-// Tempo de vida do Pool de conexıes
+// Tempo de vida do Pool de conex√µes
 func (co *Conn) SetPoolLifeTime(d time.Duration) {
 	co.PoolLifetime = d
 	co.DB.SetConnMaxIdleTime(d)
 }
 
 // SetMaxOpenConns
-// Maximo de conexıes abertas
+// Maximo de conex√µes abertas
 func (co *Conn) SetMaxOpenConns(n int) {
 	co.MaxOpenConns = n
 	co.DB.SetMaxOpenConns(n)
 }
 
 // SetConnLifeTime
-// Tempo de vida das conexıes
+// Tempo de vida das conex√µes
 func (co *Conn) SetConnLifeTime(d time.Duration) {
 	co.ConnLifetime = d
 	co.DB.SetConnMaxLifetime(d)
@@ -135,42 +136,25 @@ func (co *Conn) CreateContext(ctx context.Context) (context.Context, context.Can
 	return context.WithTimeout(ctx, timeout)
 }
 
-func (co *Conn) StartTransaction() error {
-	if co.tx == nil {
-		t, err := co.DB.Begin()
-		if err != nil {
-			return err
-		}
-		co.tx = t
+func (co *Conn) StartTransaction() (*sql.Tx, error) {
+	tx, err := co.DB.Begin()
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return tx, nil
 }
 
-func (co *Conn) StartTransactionContext(ctx context.Context) error {
-	if co.tx == nil {
-
-		opts := &sql.TxOptions{
-			Isolation: sql.LevelDefault,
-			ReadOnly:  false,
-		}
-
-		t, err := co.DB.BeginTx(ctx, opts)
-		if err != nil {
-			return err
-		}
-		co.tx = t
+func (co *Conn) StartTransactionContext(ctx context.Context) (*sql.Tx, error) {
+	opts := &sql.TxOptions{
+		Isolation: sql.LevelDefault,
+		ReadOnly:  false,
 	}
-	return nil
-}
-func (co *Conn) Commit() error {
-	err := co.tx.Commit()
-	co.tx = nil
-	return err
-}
-func (co *Conn) Rollback() error {
-	err := co.tx.Rollback()
-	co.tx = nil
-	return err
+
+	tx, err := co.DB.BeginTx(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return tx, nil
 }
 func (co *Conn) Exec(sql string, arg ...any) (sql.Result, error) {
 	return co.tx.Exec(sql, arg)
