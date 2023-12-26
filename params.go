@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 )
 
 type Params struct {
@@ -108,6 +109,20 @@ func (p *Params) SetOutputParam(paramName string, paramValue any) *Params {
 			}
 		case string:
 			value := generateString()
+			param = &Param{
+				Name:      paramName,
+				Value:     &Variant{Value: &value},
+				ParamType: OUT,
+			}
+		case bool:
+			value := false
+			param = &Param{
+				Name:      paramName,
+				Value:     &Variant{Value: &value},
+				ParamType: OUT,
+			}
+		case time.Time:
+			value := time.Time{}
 			param = &Param{
 				Name:      paramName,
 				Value:     &Variant{Value: &value},

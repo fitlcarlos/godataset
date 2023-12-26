@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
-	go_ora "github.com/sijms/go-ora/v2"
+	goOra "github.com/sijms/go-ora/v2"
 	"reflect"
 	"regexp"
 	"strings"
@@ -16,7 +16,8 @@ import (
 
 type DataSet struct {
 	Connection      *Conn
-	Tx              *sql.Tx
+	Tx              *Transaction
+	Ctx             context.Context
 	Sql             Strings
 	Fields          *Fields
 	Params          *Params
@@ -26,6 +27,7 @@ type DataSet struct {
 	Recno           int
 	MasterSource    *MasterSource
 	IndexFieldNames string
+	Silent          bool
 }
 
 func NewDataSet(db *Conn) *DataSet {
@@ -33,6 +35,7 @@ func NewDataSet(db *Conn) *DataSet {
 		Connection:   db,
 		Index:        0,
 		Recno:        0,
+		Silent:       true,
 		Fields:       NewFields(),
 		Params:       NewParams(),
 		Macros:       NewMacros(),
@@ -43,7 +46,7 @@ func NewDataSet(db *Conn) *DataSet {
 	return ds
 }
 
-func NewDataSetTx(tx *sql.Tx) *DataSet {
+func NewDataSetTx(tx *Transaction) *DataSet {
 	ds := &DataSet{
 		Tx:           tx,
 		Index:        0,
@@ -58,6 +61,11 @@ func NewDataSetTx(tx *sql.Tx) *DataSet {
 	return ds
 }
 
+func (ds *DataSet) AddContext(ctx context.Context) *DataSet {
+	ds.Ctx = ctx
+	return ds
+}
+
 func (ds *DataSet) Open() error {
 	ds.Rows = nil
 	ds.Index = 0
@@ -67,25 +75,63 @@ func (ds *DataSet) Open() error {
 		ds.CreateFields()
 	}
 
-	sql := ds.GetSqlMasterDetail()
+	query := ds.GetSqlMasterDetail()
 
-	if ds.Connection.log {
-		fmt.Println(sql)
-		ds.PrintParam()
+	var rows *sql.Rows
+	var err error
+
+	if ds.Tx != nil {
+		if ds.Tx.Conn.log {
+			fmt.Println(query)
+			ds.PrintParam()
+		}
+
+		if ds.Ctx != nil {
+			rows, err = ds.Tx.tx.QueryContext(ds.Ctx, query, ds.GetParams()...)
+		} else {
+			rows, err = ds.Tx.tx.Query(query, ds.GetParams()...)
+		}
+
+		if err != nil {
+			return err
+		}
+	} else {
+		if ds.Connection.log {
+			fmt.Println(query)
+			ds.PrintParam()
+		}
+
+		if ds.Ctx != nil {
+			rows, err = ds.Connection.DB.QueryContext(ds.Ctx, query, ds.GetParams()...)
+		} else {
+			rows, err = ds.Connection.DB.Query(query, ds.GetParams()...)
+		}
+
+		if err != nil {
+			errPing := ds.Connection.DB.Ping()
+			if errPing != nil {
+				errConn := ds.Connection.Open()
+				if errConn != nil {
+					return err
+				}
+
+				if ds.Ctx != nil {
+					rows, err = ds.Connection.DB.QueryContext(ds.Ctx, query, ds.GetParams()...)
+				} else {
+					rows, err = ds.Connection.DB.Query(query, ds.GetParams()...)
+				}
+
+				if err != nil {
+					return err
+				}
+			} else {
+				return fmt.Errorf("could not open dataset %v\n", err)
+			}
+		}
 	}
 
-	rows, err := ds.Connection.DB.Query(sql, ds.GetParams()...)
-
-	if err != nil {
-		errPing := ds.Connection.DB.Ping()
-		if errPing != nil {
-			errConn := ds.Connection.Open()
-			if errConn != nil {
-				return err
-			}
-		} else {
-			return fmt.Errorf("could not open dataset %v\n", err)
-		}
+	if rows == nil {
+		return fmt.Errorf("rows empty")
 	}
 
 	defer rows.Close()
@@ -106,25 +152,56 @@ func (ds *DataSet) OpenContext(context context.Context) error {
 		ds.CreateFields()
 	}
 
-	sql := ds.GetSqlMasterDetail()
+	query := ds.GetSqlMasterDetail()
 
 	if ds.Connection.log {
-		fmt.Println(sql)
+		fmt.Println(query)
 		ds.PrintParam()
 	}
 
-	rows, err := ds.Connection.DB.QueryContext(context, sql, ds.GetParams()...)
+	var rows *sql.Rows
+	var err error
 
-	if err != nil {
-		errPing := ds.Connection.DB.PingContext(context)
-		if errPing != nil {
-			errConn := ds.Connection.Open()
-			if errConn != nil {
-				return err
-			}
-		} else {
-			return fmt.Errorf("could not open dataset %v\n", err)
+	if ds.Tx != nil {
+		if ds.Tx.Conn.log {
+			fmt.Println(query)
+			ds.PrintParam()
 		}
+
+		rows, err = ds.Tx.Conn.DB.QueryContext(context, query, ds.GetParams()...)
+
+		if err != nil {
+			return err
+		}
+	} else {
+		if ds.Connection.log {
+			fmt.Println(query)
+			ds.PrintParam()
+		}
+
+		rows, err = ds.Connection.DB.QueryContext(context, query, ds.GetParams()...)
+
+		if err != nil {
+			errPing := ds.Connection.DB.PingContext(context)
+			if errPing != nil {
+				errConn := ds.Connection.Open()
+				if errConn != nil {
+					return err
+				}
+
+				rows, err = ds.Connection.DB.QueryContext(context, query, ds.GetParams()...)
+
+				if err != nil {
+					return err
+				}
+			} else {
+				return fmt.Errorf("could not open dataset %v\n", err)
+			}
+		}
+	}
+
+	if rows == nil {
+		return fmt.Errorf("rows empty")
 	}
 
 	defer rows.Close()
@@ -155,15 +232,23 @@ func (ds *DataSet) Close() {
 }
 
 func (ds *DataSet) Exec() (sql.Result, error) {
-	sql := ds.GetSql()
 
-	if ds.Connection.log {
-		fmt.Println(sql)
-		ds.PrintParam()
-	}
+	query := ds.GetSql()
+
+	var stmt *sql.Stmt
+	var err error
 
 	if ds.Tx != nil {
-		stmt, err := ds.Tx.Prepare(sql)
+		if ds.Tx.Conn.log {
+			fmt.Println(query)
+			ds.PrintParam()
+		}
+
+		if ds.Ctx != nil {
+			stmt, err = ds.Tx.tx.PrepareContext(ds.Ctx, query)
+		} else {
+			stmt, err = ds.Tx.tx.Prepare(query)
+		}
 
 		if err != nil {
 			return nil, err
@@ -171,32 +256,42 @@ func (ds *DataSet) Exec() (sql.Result, error) {
 
 		defer stmt.Close()
 
-		return stmt.Exec(ds.GetParams()...)
 	} else {
-		stmt, err := ds.Connection.DB.Prepare(sql)
+		if ds.Connection.log {
+			fmt.Println(query)
+			ds.PrintParam()
+		}
+
+		if ds.Ctx != nil {
+			stmt, err = ds.Connection.DB.PrepareContext(ds.Ctx, query)
+		} else {
+			stmt, err = ds.Connection.DB.Prepare(query)
+		}
 
 		if err != nil {
 			return nil, err
 		}
 
 		defer stmt.Close()
+	}
 
+	if ds.Ctx != nil {
+		return stmt.ExecContext(ds.Ctx, ds.GetParams()...)
+	} else {
 		return stmt.Exec(ds.GetParams()...)
 	}
 }
 
 func (ds *DataSet) ExecContext(context context.Context) (sql.Result, error) {
-	sql := ds.GetSql()
-
-	if ds.Connection != nil {
-		if ds.Connection.log {
-			fmt.Println(sql)
-			ds.PrintParam()
-		}
-	}
+	vsql := ds.GetSql()
 
 	if ds.Tx != nil {
-		stmt, err := ds.Tx.PrepareContext(context, sql)
+		if ds.Tx.Conn.log {
+			fmt.Println(vsql)
+			ds.PrintParam()
+		}
+
+		stmt, err := ds.Tx.tx.PrepareContext(context, vsql)
 
 		if err != nil {
 			return nil, err
@@ -206,7 +301,12 @@ func (ds *DataSet) ExecContext(context context.Context) (sql.Result, error) {
 
 		return stmt.Exec(ds.GetParams()...)
 	} else {
-		stmt, err := ds.Connection.DB.PrepareContext(context, sql)
+		if ds.Connection.log {
+			fmt.Println(vsql)
+			ds.PrintParam()
+		}
+
+		stmt, err := ds.Connection.DB.PrepareContext(context, vsql)
 
 		if err != nil {
 			return nil, err
@@ -219,7 +319,15 @@ func (ds *DataSet) ExecContext(context context.Context) (sql.Result, error) {
 }
 
 func (ds *DataSet) Delete() (int64, error) {
-	result, err := ds.Exec()
+
+	var result sql.Result
+	var err error
+
+	if ds.Ctx != nil {
+		result, err = ds.ExecContext(ds.Ctx)
+	} else {
+		result, err = ds.Exec()
+	}
 
 	if err != nil {
 		return 0, err
@@ -267,12 +375,27 @@ func (ds *DataSet) GetSql() (sql string) {
 	}
 	sql = strings.Replace(sql, "\r", "\n", -1)
 	sql = strings.Replace(sql, "\n", "\n ", -1)
+
+	var dialect DialectType
+	if ds.Tx != nil {
+		dialect = ds.Tx.Conn.Dialect
+	} else {
+		dialect = ds.Connection.Dialect
+	}
+
+	switch dialect {
+	case POSTGRESQL:
+		for i := 0; i < len(ds.Params.List); i++ {
+			sql = strings.Replace(sql, ":"+ds.Params.List[i].Name, "$"+fmt.Sprint(i+1), -1)
+		}
+	}
+
 	return sql
 }
 
-func (ds *DataSet) GetSqlMasterDetail() (sql string) {
+func (ds *DataSet) GetSqlMasterDetail() (vsql string) {
 
-	sql = ds.GetSql()
+	vsql = ds.GetSql()
 
 	if ds.MasterSource.DataSource != nil {
 		var sqlWhereMasterDetail string
@@ -291,16 +414,31 @@ func (ds *DataSet) GetSqlMasterDetail() (sql string) {
 			}
 
 			if sqlWhereMasterDetail != "" {
-				sql = "select * from (" + sql + ") t where " + sqlWhereMasterDetail
+				vsql = "select * from (" + vsql + ") t where " + sqlWhereMasterDetail
 			}
 		} else {
 			fmt.Println("MasterFields or DetailFields field cannot be empty")
 		}
 	}
 
-	sql = strings.Replace(sql, "\r", "\n", -1)
-	sql = strings.Replace(sql, "\n", "\n ", -1)
-	return sql
+	vsql = strings.Replace(vsql, "\r", "\n", -1)
+	vsql = strings.Replace(vsql, "\n", "\n ", -1)
+
+	var dialect DialectType
+	if ds.Tx != nil {
+		dialect = ds.Tx.Conn.Dialect
+	} else {
+		dialect = ds.Connection.Dialect
+	}
+
+	switch dialect {
+	case POSTGRESQL:
+		for i := 0; i < len(ds.Params.List); i++ {
+			vsql = strings.Replace(vsql, ":"+ds.Params.List[i].Name, "$"+fmt.Sprint(i+1), -1)
+		}
+	}
+
+	return vsql
 }
 
 func (ds *DataSet) GetParams() []any {
@@ -380,12 +518,12 @@ func (ds *DataSet) SetInputParam(paramName string, paramValue any) *DataSet {
 }
 
 func (ds *DataSet) SetInputParamClob(paramName string, paramValue string) *DataSet {
-	ds.Params.SetInputParam(paramName, go_ora.Clob{String: paramValue})
+	ds.Params.SetInputParam(paramName, goOra.Clob{String: paramValue})
 	return ds
 }
 
 func (ds *DataSet) SetInputParamBlob(paramName string, paramValue []byte) *DataSet {
-	ds.Params.SetInputParam(paramName, go_ora.Blob{Data: paramValue})
+	ds.Params.SetInputParam(paramName, goOra.Blob{Data: paramValue})
 	return ds
 }
 
@@ -405,6 +543,16 @@ func (ds *DataSet) SetMacro(macroName string, macroValue any) *DataSet {
 }
 
 func (ds *DataSet) CreateFields() error {
+
+	//stmt, err := plsqlparser.ParseToConvertMap(ds.GetSql())
+	//
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//for i := 0; i < len(stmt.Fields); i++ {
+	//	_ = ds.Fields.Add(stmt.Fields[i].String())
+	//}
 
 	stmt, err := sqlparser.Parse(ds.GetSql())
 
@@ -547,12 +695,12 @@ func (ds *DataSet) AddMasterFields(fields ...string) *DataSet {
 	return ds
 }
 
-func (ds *DataSet) ClearDetailFields(fields ...string) *DataSet {
+func (ds *DataSet) ClearDetailFields() *DataSet {
 	ds.MasterSource.ClearDetailFields()
 	return ds
 }
 
-func (ds *DataSet) ClearMasterFields(fields ...string) *DataSet {
+func (ds *DataSet) ClearMasterFields() *DataSet {
 	ds.MasterSource.ClearMasterFields()
 	return ds
 }
@@ -574,7 +722,7 @@ func (ds *DataSet) ToStruct(model any) error {
 	case reflect.Slice, reflect.Array:
 		return ds.toStructList(modelValue)
 	default:
-		return errors.New("The interface is not a slice, array or struct")
+		return errors.New("the interface is not a slice, array or struct")
 	}
 }
 
@@ -745,23 +893,23 @@ func limitStr(value string, limit int) string {
 }
 
 func (ds *DataSet) SqlParam() string {
-	sql := ds.Sql.Text()
+	vsql := ds.Sql.Text()
 	for i := 0; i < len(ds.Params.List); i++ {
 		key := ds.Params.List[i].Name
 		value := ds.Params.List[i].Value
 		switch val := value.Value.(type) {
 		case nil:
-			sql = strings.ReplaceAll(sql, ":"+key, "null")
+			vsql = strings.ReplaceAll(vsql, ":"+key, "null")
 		case time.Time:
 			data := limitStr(value.AsString(), 19)
-			sql = strings.ReplaceAll(sql, ":"+key, "to_date('"+data+"','rrrr-mm-dd hh24:mi:ss')")
+			vsql = strings.ReplaceAll(vsql, ":"+key, "to_date('"+data+"','rrrr-mm-dd hh24:mi:ss')")
 		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-			sql = strings.ReplaceAll(sql, ":"+key, fmt.Sprintf("%v", val))
+			vsql = strings.ReplaceAll(vsql, ":"+key, fmt.Sprintf("%v", val))
 		case float32, float64:
-			sql = strings.ReplaceAll(sql, ":"+key, fmt.Sprintf("%f", val))
+			vsql = strings.ReplaceAll(vsql, ":"+key, fmt.Sprintf("%f", val))
 		case string:
-			sql = strings.ReplaceAll(sql, ":"+key, "'"+value.AsString()+"'")
+			vsql = strings.ReplaceAll(vsql, ":"+key, "'"+value.AsString()+"'")
 		}
 	}
-	return sql
+	return vsql
 }

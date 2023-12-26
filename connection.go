@@ -11,7 +11,6 @@ import (
 
 type Conn struct {
 	DB           *sql.DB
-	tx           *sql.Tx
 	Dialect      DialectType
 	DSN          string
 	log          bool
@@ -136,32 +135,42 @@ func (co *Conn) CreateContext(ctx context.Context) (context.Context, context.Can
 	return context.WithTimeout(ctx, timeout)
 }
 
-func (co *Conn) StartTransaction() (*sql.Tx, error) {
-	tx, err := co.DB.Begin()
+func (co *Conn) StartTransaction() (*Transaction, error) {
+	tx, err := NewTransaction(co)
 	if err != nil {
 		return nil, err
 	}
 	return tx, nil
 }
 
-func (co *Conn) StartTransactionContext(ctx context.Context) (*sql.Tx, error) {
-	opts := &sql.TxOptions{
-		Isolation: sql.LevelDefault,
-		ReadOnly:  false,
-	}
-
-	tx, err := co.DB.BeginTx(ctx, opts)
+func (co *Conn) StartTransactionContext(ctx context.Context) (*Transaction, error) {
+	tx, err := NewTransactionCtx(co, ctx)
 	if err != nil {
 		return nil, err
 	}
 	return tx, nil
 }
 func (co *Conn) Exec(sql string, arg ...any) (sql.Result, error) {
-	return co.tx.Exec(sql, arg)
+	return co.DB.Exec(sql, arg)
 }
 
 func (co *Conn) Close() {
 	if err := co.DB.Close(); err != nil {
 		return
 	}
+}
+
+func (co *Conn) NewDataSet() *DataSet {
+	ds := &DataSet{
+		Connection:   co,
+		Index:        0,
+		Recno:        0,
+		Fields:       NewFields(),
+		Params:       NewParams(),
+		Macros:       NewMacros(),
+		MasterSource: NewMasterSource(),
+	}
+	ds.Fields.Owner = ds
+
+	return ds
 }

@@ -32,6 +32,7 @@ func (fd *Fields) FieldByName(fieldName string) *Field {
 	for i := 0; i < len(fd.List); i++ {
 		if strings.ToUpper(fd.List[i].Name) == strings.ToUpper(fieldName) {
 			field = fd.List[i]
+			return field
 		}
 	}
 

@@ -2,6 +2,7 @@ package godata
 
 import (
 	"fmt"
+	"github.com/araddon/dateparse"
 	"reflect"
 	"strconv"
 	"strings"
@@ -9,14 +10,20 @@ import (
 )
 
 type Variant struct {
-	Value any
+	Value  any
+	Silent bool
 }
 
-func (v Variant) AsValue() any {
+func (v *Variant) SetSilent(value bool) *Variant {
+	v.Silent = value
+	return v
+}
+
+func (v *Variant) AsValue() any {
 	return v.Value
 }
 
-func (v Variant) AsString() string {
+func (v *Variant) AsString() string {
 	value := ""
 	switch val := v.Value.(type) {
 	case nil:
@@ -31,17 +38,37 @@ func (v Variant) AsString() string {
 		value = val
 	default:
 		t := reflect.TypeOf(v.Value)
-		fmt.Printf("unable to convert data type to string. Type: %v", t)
+		msg := fmt.Sprintf("unable to convert data type to string. Type: %v", t)
+		if v.Silent {
+			fmt.Println(msg)
+		} else {
+			panic(msg)
+		}
+
 		value = ""
 	}
 	value = strings.Replace(value, "\r", "\n", -1)
 	return value
 }
+func (v *Variant) AsStringNil() *string {
+	valor := v.AsValue()
+	var tvalor any
 
-func (v Variant) AsInt() int {
+	if valor == nil {
+		return nil
+	} else {
+		tvalor = v.AsString()
+		t, ok := tvalor.(string)
+		if ok {
+			return &t
+		}
+		return nil
+	}
+}
+func (v *Variant) AsInt() int {
 	switch val := v.Value.(type) {
 	case nil:
-		return int(0)
+		return 0
 	case int:
 		return v.Value.(int)
 	case int8:
@@ -56,18 +83,42 @@ func (v Variant) AsInt() int {
 		intValue, err := strconv.Atoi(val)
 		if err != nil {
 			t := reflect.TypeOf(val)
-			fmt.Printf("unable to convert data type to int, type: %v", t)
-			return int(0)
+			msg := fmt.Sprintf("unable to convert data type to int. Type: %v", t)
+			if v.Silent {
+				fmt.Println(msg)
+			} else {
+				panic(msg)
+			}
+			return 0
 		}
 		return intValue
 	default:
 		t := reflect.TypeOf(val)
-		fmt.Printf("unable to convert data type to int, type: %v", t)
-		return int(0)
+		msg := fmt.Sprintf("unable to convert data type to int. Type: %v", t)
+		if v.Silent {
+			fmt.Println(msg)
+		} else {
+			panic(msg)
+		}
+		return 0
 	}
 }
+func (v *Variant) AsIntNil() *int {
+	valor := v.AsValue()
+	var tvalor any
 
-func (v Variant) AsInt8() int8 {
+	if valor == nil {
+		return nil
+	} else {
+		tvalor = v.AsInt()
+		t, ok := tvalor.(int)
+		if ok {
+			return &t
+		}
+		return nil
+	}
+}
+func (v *Variant) AsInt8() int8 {
 	switch val := v.Value.(type) {
 	case nil:
 		return int8(0)
@@ -85,18 +136,42 @@ func (v Variant) AsInt8() int8 {
 		int8Value, err := strconv.ParseInt(val, 10, 8)
 		if err != nil {
 			t := reflect.TypeOf(val)
-			fmt.Printf("unable to convert data type to int8, type: %v", t)
+			msg := fmt.Sprintf("unable to convert data type to int8. Type: %v", t)
+			if v.Silent {
+				fmt.Println(msg)
+			} else {
+				panic(msg)
+			}
 			return int8(0)
 		}
 		return int8(int8Value)
 	default:
 		t := reflect.TypeOf(val)
-		fmt.Printf("unable to convert data type to int8, type: %v", t)
+		msg := fmt.Sprintf("unable to convert data type to int8. Type: %v", t)
+		if v.Silent {
+			fmt.Println(msg)
+		} else {
+			panic(msg)
+		}
 		return int8(0)
 	}
 }
+func (v *Variant) AsInt8Nil() *int8 {
+	valor := v.AsValue()
+	var tvalor any
 
-func (v Variant) AsInt16() int16 {
+	if valor == nil {
+		return nil
+	} else {
+		tvalor = v.AsInt8()
+		t, ok := tvalor.(int8)
+		if ok {
+			return &t
+		}
+		return nil
+	}
+}
+func (v *Variant) AsInt16() int16 {
 	switch val := v.Value.(type) {
 	case nil:
 		return int16(0)
@@ -114,18 +189,42 @@ func (v Variant) AsInt16() int16 {
 		int16Value, err := strconv.ParseInt(val, 10, 16)
 		if err != nil {
 			t := reflect.TypeOf(val)
-			fmt.Printf("unable to convert data type to int16, type: %v", t)
+			msg := fmt.Sprintf("unable to convert data type to int16. Type: %v", t)
+			if v.Silent {
+				fmt.Println(msg)
+			} else {
+				panic(msg)
+			}
 			return int16(0)
 		}
 		return int16(int16Value)
 	default:
 		t := reflect.TypeOf(val)
-		fmt.Printf("unable to convert data type to int16, type: %v", t)
+		msg := fmt.Sprintf("unable to convert data type to int16. Type: %v", t)
+		if v.Silent {
+			fmt.Println(msg)
+		} else {
+			panic(msg)
+		}
 		return int16(0)
 	}
 }
+func (v *Variant) AsInt16Nil() *int16 {
+	valor := v.AsValue()
+	var tvalor any
 
-func (v Variant) AsInt32() int32 {
+	if valor == nil {
+		return nil
+	} else {
+		tvalor = v.AsInt16()
+		t, ok := tvalor.(int16)
+		if ok {
+			return &t
+		}
+		return nil
+	}
+}
+func (v *Variant) AsInt32() int32 {
 	switch val := v.Value.(type) {
 	case nil:
 		return int32(0)
@@ -147,18 +246,42 @@ func (v Variant) AsInt32() int32 {
 		int32Value, err := strconv.ParseInt(val, 10, 32)
 		if err != nil {
 			t := reflect.TypeOf(val)
-			fmt.Printf("unable to convert data type to int32, type: %v", t)
+			msg := fmt.Sprintf("unable to convert data type to int32. Type: %v", t)
+			if v.Silent {
+				fmt.Println(msg)
+			} else {
+				panic(msg)
+			}
 			return int32(0)
 		}
 		return int32(int32Value)
 	default:
 		t := reflect.TypeOf(val)
-		fmt.Printf("unable to convert data type to int32, type: %v", t)
+		msg := fmt.Sprintf("unable to convert data type to int32. Type: %v", t)
+		if v.Silent {
+			fmt.Println(msg)
+		} else {
+			panic(msg)
+		}
 		return int32(0)
 	}
 }
+func (v *Variant) AsInt32Nil() *int32 {
+	valor := v.AsValue()
+	var tvalor any
 
-func (v Variant) AsInt64() int64 {
+	if valor == nil {
+		return nil
+	} else {
+		tvalor = v.AsInt32()
+		t, ok := tvalor.(int32)
+		if ok {
+			return &t
+		}
+		return nil
+	}
+}
+func (v *Variant) AsInt64() int64 {
 	switch val := v.Value.(type) {
 	case nil:
 		return int64(0)
@@ -180,21 +303,55 @@ func (v Variant) AsInt64() int64 {
 		int64Value, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {
 			t := reflect.TypeOf(val)
-			fmt.Printf("unable to convert data type to int64, type: %v", t)
+			msg := fmt.Sprintf("unable to convert data type to int64. Type: %v", t)
+			if v.Silent {
+				fmt.Println(msg)
+			} else {
+				panic(msg)
+			}
 			return int64(0)
 		}
 		return int64Value
 	default:
 		t := reflect.TypeOf(val)
-		fmt.Printf("unable to convert data type to int64, type: %v", t)
+		msg := fmt.Sprintf("unable to convert data type to int64. Type: %v", t)
+		if v.Silent {
+			fmt.Println(msg)
+		} else {
+			panic(msg)
+		}
 		return int64(0)
 	}
 }
+func (v *Variant) AsInt64Nil() *int64 {
+	valor := v.AsValue()
+	var tvalor any
 
-func (v Variant) AsFloat() float32 {
+	if valor == nil {
+		return nil
+	} else {
+		tvalor = v.AsInt64()
+		t, ok := tvalor.(int64)
+		if ok {
+			return &t
+		}
+		return nil
+	}
+}
+func (v *Variant) AsFloat() float32 {
 	switch val := v.Value.(type) {
 	case nil:
 		return float32(0)
+	case int:
+		return float32(val)
+	case int8:
+		return float32(val)
+	case int16:
+		return float32(val)
+	case int32:
+		return float32(val)
+	case int64:
+		return float32(val)
 	case float32:
 		return val
 	case float64:
@@ -203,21 +360,55 @@ func (v Variant) AsFloat() float32 {
 		floatValue, err := strconv.ParseFloat(val, 32)
 		if err != nil {
 			t := reflect.TypeOf(val)
-			fmt.Printf("unable to convert data type to float32, type: %v", t)
+			msg := fmt.Sprintf("unable to convert data type to float32. Type: %v", t)
+			if v.Silent {
+				fmt.Println(msg)
+			} else {
+				panic(msg)
+			}
 			return float32(0)
 		}
 		return float32(floatValue)
 	default:
 		t := reflect.TypeOf(val)
-		fmt.Printf("unable to convert data type to float32, type: %v", t)
+		msg := fmt.Sprintf("unable to convert data type to float32. Type: %v", t)
+		if v.Silent {
+			fmt.Println(msg)
+		} else {
+			panic(msg)
+		}
 		return float32(0)
 	}
 }
+func (v *Variant) AsFloatNil() *float32 {
+	valor := v.AsValue()
+	var tvalor any
 
-func (v Variant) AsFloat64() float64 {
+	if valor == nil {
+		return nil
+	} else {
+		tvalor = v.AsFloat()
+		t, ok := tvalor.(float32)
+		if ok {
+			return &t
+		}
+		return nil
+	}
+}
+func (v *Variant) AsFloat64() float64 {
 	switch val := v.Value.(type) {
 	case nil:
 		return float64(0)
+	case int:
+		return float64(val)
+	case int8:
+		return float64(val)
+	case int16:
+		return float64(val)
+	case int32:
+		return float64(val)
+	case int64:
+		return float64(val)
 	case float32:
 		return float64(val)
 	case float64:
@@ -226,21 +417,47 @@ func (v Variant) AsFloat64() float64 {
 		floatValue, err := strconv.ParseFloat(val, 64)
 		if err != nil {
 			t := reflect.TypeOf(val)
-			fmt.Printf("unable to convert data type to float64, type: %v", t)
+			msg := fmt.Sprintf("unable to convert data type to float64. Type: %v", t)
+			if v.Silent {
+				fmt.Println(msg)
+			} else {
+				panic(msg)
+			}
 			return float64(0)
 		}
 		return floatValue
 	default:
 		t := reflect.TypeOf(val)
-		fmt.Printf("unable to convert data type to float64, type: %v", t)
+		msg := fmt.Sprintf("unable to convert data type to float64. Type: %v", t)
+		if v.Silent {
+			fmt.Println(msg)
+		} else {
+			panic(msg)
+		}
 		return float64(0)
 	}
 }
+func (v *Variant) AsFloat64Nil() *float64 {
+	valor := v.AsValue()
+	var tvalor any
 
-func (v Variant) AsBool() bool {
+	if valor == nil {
+		return nil
+	} else {
+		tvalor = v.AsFloat64()
+		t, ok := tvalor.(float64)
+		if ok {
+			return &t
+		}
+		return nil
+	}
+}
+func (v *Variant) AsBool() bool {
 	switch val := v.Value.(type) {
 	case nil:
 		return false
+	case bool:
+		return v.Value.(bool)
 	case int:
 		return v.Value.(int) == 1
 	case int8:
@@ -260,26 +477,120 @@ func (v Variant) AsBool() bool {
 		}
 	default:
 		t := reflect.TypeOf(val)
-		fmt.Printf("unable to convert data type to bool, type: %v", t)
+		msg := fmt.Sprintf("unable to convert data type to bool. Type: %v", t)
+		if v.Silent {
+			fmt.Println(msg)
+		} else {
+			panic(msg)
+		}
 		return false
 	}
 }
+func (v *Variant) AsBoolNil() *bool {
+	valor := v.AsValue()
+	var tvalor any
 
-func (v Variant) AsDateTime() time.Time {
-	switch v.Value.(type) {
+	if valor == nil {
+		return nil
+	} else {
+		tvalor = v.AsBool()
+		t, ok := tvalor.(bool)
+		if ok {
+			return &t
+		}
+		return nil
+	}
+}
+func (v *Variant) AsDateTime() time.Time {
+	switch val := v.Value.(type) {
 	case nil:
 		data, _ := time.Parse(time.DateTime, time.DateTime)
 		return data
 	case time.Time:
 		return v.Value.(time.Time)
+	case string:
+		dataLocal, err := dateparse.ParseAny(val)
+
+		if err != nil {
+			preferMonthFirstFalse := dateparse.PreferMonthFirst(false)
+			dataLocal, err = dateparse.ParseAny(val, preferMonthFirstFalse)
+
+			if err != nil {
+				msg := fmt.Sprintf("unable to convert data type to time.")
+				if v.Silent {
+					fmt.Println(msg)
+				} else {
+					panic(msg)
+				}
+				data, _ := time.Parse(time.DateTime, time.DateTime)
+				return data
+			}
+		}
+
+		return dataLocal
 	default:
-		fmt.Printf("unable to convert data type to time.")
+		msg := fmt.Sprintf("unable to convert data type to time. ")
+		if v.Silent {
+			fmt.Println(msg)
+		} else {
+			panic(msg)
+		}
 		data, _ := time.Parse(time.DateTime, time.DateTime)
 		return data
 	}
 }
 
-func (v Variant) IsNull() bool {
+func (v *Variant) AsDateTimeNil() *time.Time {
+	valor := v.AsValue()
+	var tvalor any
+
+	if valor == nil {
+		return nil
+	} else {
+		tvalor = v.AsDateTime()
+		t, ok := tvalor.(time.Time)
+		if ok {
+			return &t
+		}
+		return nil
+	}
+}
+
+func (v *Variant) AsByte() []byte {
+	switch val := v.Value.(type) {
+	case nil:
+		return nil
+	case []byte:
+		return v.Value.([]byte)
+	case string:
+		return []byte(v.AsString())
+	default:
+		t := reflect.TypeOf(val)
+		msg := fmt.Sprintf("unable to convert data type to byte. Type: %v", t)
+		if v.Silent {
+			fmt.Println(msg)
+		} else {
+			panic(msg)
+		}
+		return nil
+	}
+}
+func (v *Variant) AsByteNil() *[]byte {
+	valor := v.AsValue()
+	var tvalor any
+
+	if valor == nil {
+		return nil
+	} else {
+		tvalor = v.AsByte()
+		t, ok := tvalor.([]byte)
+		if ok {
+			return &t
+		}
+		return nil
+	}
+}
+func (v *Variant) IsNull() bool {
 	switch val := v.Value.(type) {
 	case nil:
 		return true
@@ -290,26 +601,11 @@ func (v Variant) IsNull() bool {
 	}
 }
 
-func (v Variant) IsNotNull() bool {
+func (v *Variant) IsNotNull() bool {
 	return !v.IsNull()
 }
 
 func IsPointer(value interface{}) bool {
 	t := reflect.TypeOf(value)
 	return t.Kind() == reflect.Ptr
-}
-
-func getScale(number float64) int {
-	str := fmt.Sprintf("%f", number)
-
-	// Dividir a string em partes inteira e decimal
-	parts := strings.Split(str, ".")
-
-	// Se houver uma parte decimal, retornar o número de dígitos na parte decimal
-	if len(parts) == 2 {
-		return len(parts[1])
-	}
-
-	// Caso contrário, o número não possui parte decimal (escala = 0)
-	return 0
 }
