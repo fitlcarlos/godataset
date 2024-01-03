@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
 	"unsafe"
 )
 
@@ -518,12 +519,12 @@ func (ds *DataSet) SetInputParam(paramName string, paramValue any) *DataSet {
 }
 
 func (ds *DataSet) SetInputParamClob(paramName string, paramValue string) *DataSet {
-	ds.Params.SetInputParam(paramName, goOra.Clob{String: paramValue})
+	ds.Params.SetInputParam(paramName, goOra.Clob{String: paramValue, Valid: StrEmpty(paramValue)})
 	return ds
 }
 
 func (ds *DataSet) SetInputParamBlob(paramName string, paramValue []byte) *DataSet {
-	ds.Params.SetInputParam(paramName, goOra.Blob{Data: paramValue})
+	ds.Params.SetInputParam(paramName, goOra.Blob{Data: paramValue, Valid: len(paramValue) > 0})
 	return ds
 }
 
@@ -912,4 +913,22 @@ func (ds *DataSet) SqlParam() string {
 		}
 	}
 	return vsql
+}
+
+func StrEmpty(s string) bool {
+	if len(strings.TrimSpace(s)) == 0 {
+		return true
+	}
+
+	r := []rune(s)
+	l := len(r)
+
+	for l > 0 {
+		l--
+		if !unicode.IsSpace(r[l]) {
+			return false
+		}
+	}
+
+	return true
 }
