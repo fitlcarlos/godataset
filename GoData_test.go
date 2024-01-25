@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"testing"
-	//"vitess.io/vitess/go/vt/sqlparser"
 )
 
 func TestGodata(t *testing.T) {

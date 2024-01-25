@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
-	goOra "github.com/sijms/go-ora/v2"
 	"reflect"
 	"regexp"
 	"strings"
@@ -14,6 +13,29 @@ import (
 	"unicode"
 	"unsafe"
 )
+
+type DS interface {
+	NewDataSet(db *Conn) *DataSet
+	Open() error
+	Close()
+	Exec() (sql.Result, error)
+	GetSql() (sql string)
+	GetParams() []any
+	Scan(list *sql.Rows)
+	ParamByName(paramName string) Param
+	SetInputParam(paramName string, paramValue any) *DataSet
+	SetOutputParam(paramName string, paramType any) *DataSet
+	FieldByName(fieldName string) Field
+	Locate(key string, value any) bool
+	First()
+	Next()
+	Eof() bool
+	IsEmpty() bool
+	IsNotEmpty() bool
+	Count() int
+	AddSql(sql string) *DataSet
+	ToStruct(model any) error
+}
 
 type DataSet struct {
 	Connection      *Conn
@@ -255,8 +277,6 @@ func (ds *DataSet) Exec() (sql.Result, error) {
 			return nil, err
 		}
 
-		defer stmt.Close()
-
 	} else {
 		if ds.Connection.log {
 			fmt.Println(query)
@@ -272,9 +292,9 @@ func (ds *DataSet) Exec() (sql.Result, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		defer stmt.Close()
 	}
+
+	defer stmt.Close()
 
 	if ds.Ctx != nil {
 		return stmt.ExecContext(ds.Ctx, ds.GetParams()...)
@@ -284,6 +304,9 @@ func (ds *DataSet) Exec() (sql.Result, error) {
 }
 
 func (ds *DataSet) ExecContext(context context.Context) (sql.Result, error) {
+	var stmt *sql.Stmt
+	var err error
+
 	vsql := ds.GetSql()
 
 	if ds.Tx != nil {
@@ -292,31 +315,28 @@ func (ds *DataSet) ExecContext(context context.Context) (sql.Result, error) {
 			ds.PrintParam()
 		}
 
-		stmt, err := ds.Tx.tx.PrepareContext(context, vsql)
+		stmt, err = ds.Tx.tx.PrepareContext(context, vsql)
 
 		if err != nil {
 			return nil, err
 		}
 
-		defer stmt.Close()
-
-		return stmt.Exec(ds.GetParams()...)
 	} else {
 		if ds.Connection.log {
 			fmt.Println(vsql)
 			ds.PrintParam()
 		}
 
-		stmt, err := ds.Connection.DB.PrepareContext(context, vsql)
+		stmt, err = ds.Connection.DB.PrepareContext(context, vsql)
 
 		if err != nil {
 			return nil, err
 		}
-
-		defer stmt.Close()
-
-		return stmt.ExecContext(context, ds.GetParams()...)
 	}
+
+	defer stmt.Close()
+
+	return stmt.ExecContext(context, ds.GetParams()...)
 }
 
 func (ds *DataSet) Delete() (int64, error) {
@@ -519,12 +539,12 @@ func (ds *DataSet) SetInputParam(paramName string, paramValue any) *DataSet {
 }
 
 func (ds *DataSet) SetInputParamClob(paramName string, paramValue string) *DataSet {
-	ds.Params.SetInputParam(paramName, goOra.Clob{String: paramValue, Valid: StrEmpty(paramValue)})
+	ds.Params.SetInputParamClob(paramName, paramValue)
 	return ds
 }
 
 func (ds *DataSet) SetInputParamBlob(paramName string, paramValue []byte) *DataSet {
-	ds.Params.SetInputParam(paramName, goOra.Blob{Data: paramValue, Valid: len(paramValue) > 0})
+	ds.Params.SetInputParamBlob(paramName, paramValue)
 	return ds
 }
 
@@ -649,10 +669,11 @@ func (ds *DataSet) Previous() {
 }
 
 func (ds *DataSet) Last() {
-	if !ds.Eof() {
-		ds.Index = ds.Count()
-		ds.Recno = ds.Count() + 1
+	ds.Index = ds.Count() - 1
+	if ds.Count() == 0 {
+		ds.Index = 0
 	}
+	ds.Recno = ds.Count()
 }
 
 func (ds *DataSet) Bof() bool {
@@ -915,9 +936,9 @@ func (ds *DataSet) SqlParam() string {
 	return vsql
 }
 
-func StrEmpty(s string) bool {
+func StrNotEmpty(s string) bool {
 	if len(strings.TrimSpace(s)) == 0 {
-		return true
+		return false
 	}
 
 	r := []rune(s)
@@ -926,8 +947,9 @@ func StrEmpty(s string) bool {
 	for l > 0 {
 		l--
 		if !unicode.IsSpace(r[l]) {
-			return false
+			return true
 		}
 	}
-	return true
+
+	return false
 }

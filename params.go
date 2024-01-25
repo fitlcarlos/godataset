@@ -2,6 +2,7 @@ package godata
 
 import (
 	"fmt"
+	goOra "github.com/sijms/go-ora/v2"
 	"reflect"
 	"strings"
 	"time"
@@ -75,6 +76,16 @@ func (p *Params) SetInputParam(paramName string, paramValue any) *Params {
 		p.List = append(p.List, param)
 	}
 
+	return p
+}
+
+func (p *Params) SetInputParamClob(paramName string, paramValue string) *Params {
+	p.SetInputParam(paramName, goOra.Clob{String: paramValue, Valid: StrNotEmpty(paramValue)})
+	return p
+}
+
+func (p *Params) SetInputParamBlob(paramName string, paramValue []byte) *Params {
+	p.SetInputParam(paramName, goOra.Blob{Data: paramValue, Valid: len(paramValue) > 0})
 	return p
 }
 
