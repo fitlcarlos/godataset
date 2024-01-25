@@ -1,4 +1,4 @@
-module godata
+module github.com/fitlcarlos/godata
 
 go 1.20
 
