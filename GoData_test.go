@@ -29,6 +29,8 @@ func TestGodata(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	fmt.Println(ds.Count())
+
 	ds.First()
 	for !ds.Eof() {
 		t.Log(ds.FieldByName("nome").AsString())
