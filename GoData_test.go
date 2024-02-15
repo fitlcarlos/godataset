@@ -408,7 +408,7 @@ func TestResultSetCLob(t *testing.T) {
 	//_, err = ds.
 	//	AddSql("INSERT INTO fab_mov_art_rena_ards (arquivo)").
 	//	AddSql("values (:arquivo) returning id into :out_id").
-	//	SetInputParam("arquivo", go_ora.Clob{String: (json)}).
+	//	SetInputParamClob("arquivo", json).
 	//	SetOutputParam("out_id", int64(0)).
 	//	Exec()
 	//

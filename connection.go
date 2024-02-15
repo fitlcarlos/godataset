@@ -6,6 +6,7 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	_ "github.com/sijms/go-ora/v2"
+	"strconv"
 	"time"
 )
 
@@ -38,7 +39,10 @@ func NewConnection(dialect DialectType, dsn string) (*Conn, error) {
 }
 
 func NewConnectionOracle(dsn string) (*Conn, error) {
-	return NewConnection(ORACLE, dsn)
+
+	timout := strconv.FormatInt(int64(time.Minute*60), 10)
+
+	return NewConnection(ORACLE, dsn+"?connection timeout="+timout+"&lob fetch=post")
 }
 
 func NewConnectionPostgres(dsn string) (*Conn, error) {

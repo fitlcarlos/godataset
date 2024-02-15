@@ -21,6 +21,7 @@ type Field struct {
 	Visible    bool
 	AcceptNull bool
 	QuoteNull  bool
+	OmitNull   bool
 	StrNull    string
 	Order      int
 	Index      int
@@ -39,6 +40,7 @@ func NewField(name string) *Field {
 		Visible:    true,
 		AcceptNull: true,
 		QuoteNull:  true,
+		OmitNull:   false,
 		StrNull:    "null",
 		Order:      1,
 		Index:      0,

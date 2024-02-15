@@ -3,6 +3,7 @@ package godata
 import (
 	"fmt"
 	"github.com/araddon/dateparse"
+	go_ora "github.com/sijms/go-ora/v2"
 	"reflect"
 	"strconv"
 	"strings"
@@ -79,6 +80,16 @@ func (v *Variant) AsInt() int {
 		return int(v.Value.(int32))
 	case int64:
 		return int(v.Value.(int64))
+	case uint:
+		return int(v.Value.(uint))
+	case uint8:
+		return int(v.Value.(uint8))
+	case uint16:
+		return int(v.Value.(uint16))
+	case uint32:
+		return int(v.Value.(uint32))
+	case uint64:
+		return int(v.Value.(uint64))
 	case string:
 		intValue, err := strconv.Atoi(val)
 		if err != nil {
@@ -131,6 +142,16 @@ func (v *Variant) AsInt8() int8 {
 	case int32:
 		return int8(val)
 	case int64:
+		return int8(val)
+	case uint:
+		return int8(val)
+	case uint8:
+		return int8(val)
+	case uint16:
+		return int8(val)
+	case uint32:
+		return int8(val)
+	case uint64:
 		return int8(val)
 	case string:
 		int8Value, err := strconv.ParseInt(val, 10, 8)
@@ -185,6 +206,16 @@ func (v *Variant) AsInt16() int16 {
 		return int16(val)
 	case int64:
 		return int16(val)
+	case uint:
+		return int16(val)
+	case uint8:
+		return int16(val)
+	case uint16:
+		return int16(val)
+	case uint32:
+		return int16(val)
+	case uint64:
+		return int16(val)
 	case string:
 		int16Value, err := strconv.ParseInt(val, 10, 16)
 		if err != nil {
@@ -237,6 +268,16 @@ func (v *Variant) AsInt32() int32 {
 	case int32:
 		return val
 	case int64:
+		return int32(val)
+	case uint:
+		return int32(val)
+	case uint8:
+		return int32(val)
+	case uint16:
+		return int32(val)
+	case uint32:
+		return int32(val)
+	case uint64:
 		return int32(val)
 	case float32:
 		return int32(val)
@@ -295,6 +336,16 @@ func (v *Variant) AsInt64() int64 {
 		return int64(val)
 	case int64:
 		return val
+	case uint:
+		return int64(val)
+	case uint8:
+		return int64(val)
+	case uint16:
+		return int64(val)
+	case uint32:
+		return int64(val)
+	case uint64:
+		return int64(val)
 	case float32:
 		return int64(val)
 	case float64:
@@ -352,6 +403,16 @@ func (v *Variant) AsFloat() float32 {
 		return float32(val)
 	case int64:
 		return float32(val)
+	case uint:
+		return float32(val)
+	case uint8:
+		return float32(val)
+	case uint16:
+		return float32(val)
+	case uint32:
+		return float32(val)
+	case uint64:
+		return float32(val)
 	case float32:
 		return val
 	case float64:
@@ -408,6 +469,16 @@ func (v *Variant) AsFloat64() float64 {
 	case int32:
 		return float64(val)
 	case int64:
+		return float64(val)
+	case uint:
+		return float64(val)
+	case uint8:
+		return float64(val)
+	case uint16:
+		return float64(val)
+	case uint32:
+		return float64(val)
+	case uint64:
 		return float64(val)
 	case float32:
 		return float64(val)
@@ -564,6 +635,8 @@ func (v *Variant) AsByte() []byte {
 		return v.Value.([]byte)
 	case string:
 		return []byte(v.AsString())
+	case *go_ora.Clob:
+		return []byte(val.String)
 	default:
 		t := reflect.TypeOf(val)
 		msg := fmt.Sprintf("unable to convert data type to byte. Type: %v", t)
@@ -575,6 +648,7 @@ func (v *Variant) AsByte() []byte {
 		return nil
 	}
 }
+
 func (v *Variant) AsByteNil() *[]byte {
 	valor := v.AsValue()
 	var tvalor any
