@@ -6,7 +6,7 @@ require (
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/blastrain/vitess-sqlparser v0.0.0-20201030050434-a139afbb1aba
 	github.com/lib/pq v1.10.9
-	github.com/sijms/go-ora/v2 v2.8.8
+	github.com/sijms/go-ora/v2 v2.8.9
 )
 
 require (

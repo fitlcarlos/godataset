@@ -58,7 +58,6 @@ Example of use:
     func (ds *DataSet) SetInputParamClob(paramName string, paramValue string) *DataSet
     func (ds *DataSet) SetInputParamBlob(paramName string, paramValue []byte) *DataSet
     func (ds *DataSet) SetOutputParam(paramName string, paramValue any) *DataSet
-    func (ds *DataSet) SetOutputParam(paramName string, paramValue any) *DataSet
     func (ds *DataSet) SetMacro(macroName string, macroValue any) *DataSet
     func (ds *DataSet) CreateFields() error
     func (ds *DataSet) Prepare()

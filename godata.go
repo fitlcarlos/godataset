@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
+	"io"
 	"reflect"
 	"regexp"
 	"strings"
@@ -240,6 +241,23 @@ func (ds *DataSet) Close() {
 	ds.Index = 0
 	ds.Recno = 0
 	ds.Sql.Clear()
+	ds.Rows = nil
+	ds.Fields = nil
+	ds.Params = nil
+	ds.Macros = nil
+	ds.MasterSource = nil
+	ds.IndexFieldNames = ""
+
+	ds.Fields = NewFields()
+	ds.Params = NewParams()
+	ds.Macros = NewMacros()
+	ds.MasterSource = NewMasterSource()
+	ds.Fields.Owner = ds
+}
+
+func (ds *DataSet) CloseNoClearSQL() {
+	ds.Index = 0
+	ds.Recno = 0
 	ds.Rows = nil
 	ds.Fields = nil
 	ds.Params = nil
@@ -492,9 +510,15 @@ func (ds *DataSet) GetMacros() []any {
 	return macro
 }
 
+type Lob struct {
+	io.Reader
+	IsClob bool
+}
+
 func (ds *DataSet) scan(list *sql.Rows) {
 	fieldTypes, _ := list.ColumnTypes()
 	fields, _ := list.Columns()
+
 	for list.Next() {
 		columns := make([]any, len(fields))
 
@@ -578,7 +602,7 @@ func (ds *DataSet) CreateFields() error {
 	stmt, err := sqlparser.Parse(ds.GetSql())
 
 	if err != nil {
-		return err
+		return fmt.Errorf("error when parsing the query %s, error: %w", ds.GetSql(), err)
 	}
 
 	sel, ok := stmt.(*sqlparser.Select)
@@ -937,7 +961,7 @@ func (ds *DataSet) SqlParam() string {
 }
 
 func StrNotEmpty(s string) bool {
-	if len(strings.TrimSpace(s)) == 0 {
+	if len(s) == 0 {
 		return false
 	}
 
