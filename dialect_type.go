@@ -25,7 +25,7 @@ func (d DialectType) String() string {
 	case ORACLE:
 		return "oracle"
 	case POSTGRESQL:
-		return "postgres"
+		return "pgx"
 	case SQLSERVER:
 		return "sqlserver"
 	case SQLITE:

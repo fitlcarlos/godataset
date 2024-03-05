@@ -37,6 +37,8 @@ func (v *Variant) AsString() string {
 		value = fmt.Sprintf("%f", val)
 	case string:
 		value = val
+	case []uint8:
+		value = string([]byte(val))
 	default:
 		t := reflect.TypeOf(v.Value)
 		msg := fmt.Sprintf("unable to convert data type to string. Type: %v", t)

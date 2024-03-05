@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/aoticombr/golang/preprocesssql"
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"io"
 	"reflect"
-	"regexp"
 	"strings"
 	"time"
 	"unicode"
@@ -415,19 +415,19 @@ func (ds *DataSet) GetSql() (sql string) {
 	sql = strings.Replace(sql, "\r", "\n", -1)
 	sql = strings.Replace(sql, "\n", "\n ", -1)
 
-	var dialect DialectType
-	if ds.Tx != nil {
-		dialect = ds.Tx.Conn.Dialect
-	} else {
-		dialect = ds.Connection.Dialect
-	}
-
-	switch dialect {
-	case POSTGRESQL:
-		for i := 0; i < len(ds.Params.List); i++ {
-			sql = strings.Replace(sql, ":"+ds.Params.List[i].Name, "$"+fmt.Sprint(i+1), -1)
-		}
-	}
+	//var dialect DialectType
+	//if ds.Tx != nil {
+	//	dialect = ds.Tx.Conn.Dialect
+	//} else {
+	//	dialect = ds.Connection.Dialect
+	//}
+	//
+	//switch dialect {
+	//case POSTGRESQL:
+	//	for i := 0; i < len(ds.Params.List); i++ {
+	//		sql = strings.Replace(sql, ":"+ds.Params.List[i].Name, "$"+fmt.Sprint(i+1), -1)
+	//	}
+	//}
 
 	return sql
 }
@@ -628,19 +628,21 @@ func (ds *DataSet) CreateFields() error {
 	return nil
 }
 
-func (ds *DataSet) Prepare() {
-	re := regexp.MustCompile(` :(\w+)`)
-	matches := re.FindAllStringSubmatch(ds.GetSql(), -1)
-
-	for _, match := range matches {
-		paramName := match[1]
-
+func (ds *DataSet) Prepare() error {
+	//Params, MacrosUpd, MacrosRead, err := preprocesssql.PreprocessSQL(ds.GetSql(), true, true, true, true, true)
+	Params, _, _, err := preprocesssql.PreprocessSQL(ds.GetSql(), true, true, true, true, true)
+	if err != nil {
+		return err
+	}
+	for _, p := range Params.Items {
 		param := &Param{
-			Name:  paramName,
+			Name:  p.Name,
 			Value: &Variant{Value: ""},
 		}
 		ds.Params.List = append(ds.Params.List, param)
 	}
+	return nil
+
 }
 
 func (ds *DataSet) findFieldByName(fieldName string) *Field {
