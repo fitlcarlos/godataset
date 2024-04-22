@@ -8,6 +8,10 @@ type Strings struct {
 	Items []string
 }
 
+func New() *Strings {
+	return &Strings{}
+}
+
 func (s *Strings) Append(value string) *Strings {
 	s.Items = append(s.Items, value)
 	return s
@@ -29,4 +33,10 @@ func (s *Strings) Count() int {
 }
 func (s *Strings) Text() string {
 	return strings.Join(s.Items, " \n")
+}
+
+func (s *Strings) AddStrings(value *Strings) {
+	for i := 0; i < value.Count(); i++ {
+		s.Add(value.Items[i])
+	}
 }

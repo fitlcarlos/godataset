@@ -9,8 +9,9 @@ import (
 )
 
 type Params struct {
-	Owner *DataSet
-	List  []*Param
+	Owner     *DataSet
+	BatchSize int
+	List      []*Param
 }
 
 func NewParams() *Params {

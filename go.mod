@@ -3,11 +3,11 @@ module github.com/fitlcarlos/godata
 go 1.20
 
 require (
-	github.com/aoticombr/golang v1.0.71
+	github.com/aoticombr/golang v1.0.73
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/blastrain/vitess-sqlparser v0.0.0-20201030050434-a139afbb1aba
 	github.com/jackc/pgx/v5 v5.5.4
-	github.com/sijms/go-ora/v2 v2.8.9
+	github.com/sijms/go-ora/v2 v2.8.11
 )
 
 require (

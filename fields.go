@@ -19,7 +19,7 @@ func NewFields() *Fields {
 
 func (fd *Fields) FindFieldByName(fieldName string) *Field {
 	for i := 0; i < len(fd.List); i++ {
-		if strings.ToUpper(fd.List[i].Name) == strings.ToUpper(fieldName) {
+		if strings.EqualFold(fd.List[i].Name, fieldName) {
 			return fd.List[i]
 		}
 	}
@@ -30,14 +30,14 @@ func (fd *Fields) FieldByName(fieldName string) *Field {
 	var field *Field
 
 	for i := 0; i < len(fd.List); i++ {
-		if strings.ToUpper(fd.List[i].Name) == strings.ToUpper(fieldName) {
+		if strings.EqualFold(fd.List[i].Name, fieldName) {
 			field = fd.List[i]
 			return field
 		}
 	}
 
 	if field == nil {
-		field = &Field{}
+		field = &Field{Owner: fd}
 		fmt.Println("Field " + fieldName + " doesn't exists")
 	}
 

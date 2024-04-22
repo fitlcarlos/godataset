@@ -20,12 +20,14 @@ type Param struct {
 	Value     *Variant
 	ParamType ParamType
 	DataType  reflect.Type
+	Values    []*Variant
 }
 
 func NewParam(paramName string, paramType ParamType) *Param {
 	return &Param{
 		Name:      paramName,
 		ParamType: paramType,
+		Values:    []*Variant{},
 	}
 }
 func (param *Param) AsValue() *Variant {

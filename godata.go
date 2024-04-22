@@ -276,9 +276,6 @@ func (ds *DataSet) Exec() (sql.Result, error) {
 
 	query := ds.GetSql()
 
-	var stmt *sql.Stmt
-	var err error
-
 	if ds.Tx != nil {
 		if ds.Tx.Conn.log {
 			fmt.Println(query)
@@ -286,15 +283,10 @@ func (ds *DataSet) Exec() (sql.Result, error) {
 		}
 
 		if ds.Ctx != nil {
-			stmt, err = ds.Tx.tx.PrepareContext(ds.Ctx, query)
+			return ds.Tx.tx.ExecContext(ds.Ctx, query, ds.GetParams()...)
 		} else {
-			stmt, err = ds.Tx.tx.Prepare(query)
+			return ds.Tx.tx.Exec(query, ds.GetParams()...)
 		}
-
-		if err != nil {
-			return nil, err
-		}
-
 	} else {
 		if ds.Connection.log {
 			fmt.Println(query)
@@ -302,22 +294,10 @@ func (ds *DataSet) Exec() (sql.Result, error) {
 		}
 
 		if ds.Ctx != nil {
-			stmt, err = ds.Connection.DB.PrepareContext(ds.Ctx, query)
+			return ds.Connection.DB.ExecContext(ds.Ctx, query, ds.GetParams()...)
 		} else {
-			stmt, err = ds.Connection.DB.Prepare(query)
+			return ds.Connection.DB.Exec(query, ds.GetParams()...)
 		}
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	defer stmt.Close()
-
-	if ds.Ctx != nil {
-		return stmt.ExecContext(ds.Ctx, ds.GetParams()...)
-	} else {
-		return stmt.Exec(ds.GetParams()...)
 	}
 }
 
@@ -414,20 +394,7 @@ func (ds *DataSet) GetSql() (sql string) {
 	}
 	sql = strings.Replace(sql, "\r", "\n", -1)
 	sql = strings.Replace(sql, "\n", "\n ", -1)
-
-	//var dialect DialectType
-	//if ds.Tx != nil {
-	//	dialect = ds.Tx.Conn.Dialect
-	//} else {
-	//	dialect = ds.Connection.Dialect
-	//}
-	//
-	//switch dialect {
-	//case POSTGRESQL:
-	//	for i := 0; i < len(ds.Params.List); i++ {
-	//		sql = strings.Replace(sql, ":"+ds.Params.List[i].Name, "$"+fmt.Sprint(i+1), -1)
-	//	}
-	//}
+	sql = ds.replaceParam(sql)
 
 	return sql
 }
@@ -462,20 +429,7 @@ func (ds *DataSet) GetSqlMasterDetail() (vsql string) {
 
 	vsql = strings.Replace(vsql, "\r", "\n", -1)
 	vsql = strings.Replace(vsql, "\n", "\n ", -1)
-
-	var dialect DialectType
-	if ds.Tx != nil {
-		dialect = ds.Tx.Conn.Dialect
-	} else {
-		dialect = ds.Connection.Dialect
-	}
-
-	switch dialect {
-	case POSTGRESQL:
-		for i := 0; i < len(ds.Params.List); i++ {
-			vsql = strings.Replace(vsql, ":"+ds.Params.List[i].Name, "$"+fmt.Sprint(i+1), -1)
-		}
-	}
+	vsql = ds.replaceParam(vsql)
 
 	return vsql
 }
@@ -840,6 +794,9 @@ func (ds *DataSet) GetValue(field *Field, fieldType any) any {
 	case string:
 		val := field.AsString()
 		fieldValue = reflect.ValueOf(val).Convert(valueType).Interface()
+	case bool:
+		val := field.AsBool()
+		fieldValue = reflect.ValueOf(val).Convert(valueType).Interface()
 	case *int:
 		val := field.AsInt()
 		fieldValue = reflect.ValueOf(&val).Convert(valueType).Interface()
@@ -860,6 +817,9 @@ func (ds *DataSet) GetValue(field *Field, fieldType any) any {
 		fieldValue = reflect.ValueOf(&val).Convert(valueType).Interface()
 	case *string:
 		val := field.AsString()
+		fieldValue = reflect.ValueOf(&val).Convert(valueType).Interface()
+	case *bool:
+		val := field.AsBool()
 		fieldValue = reflect.ValueOf(&val).Convert(valueType).Interface()
 	default:
 		fieldValue = field.AsValue()
@@ -978,4 +938,23 @@ func StrNotEmpty(s string) bool {
 	}
 
 	return false
+}
+
+func (ds *DataSet) replaceParam(sql string) string {
+	var dialect DialectType
+
+	if ds.Tx != nil {
+		dialect = ds.Tx.Conn.Dialect
+	} else {
+		dialect = ds.Connection.Dialect
+	}
+
+	switch dialect {
+	case POSTGRESQL:
+		for i := 0; i < len(ds.Params.List); i++ {
+			sql = strings.Replace(sql, ":"+ds.Params.List[i].Name, "$"+fmt.Sprint(i+1), -1)
+		}
+	}
+
+	return sql
 }
