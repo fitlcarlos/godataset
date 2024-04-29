@@ -81,12 +81,24 @@ func (p *Params) SetInputParam(paramName string, paramValue any) *Params {
 }
 
 func (p *Params) SetInputParamClob(paramName string, paramValue string) *Params {
-	p.SetInputParam(paramName, goOra.Clob{String: paramValue, Valid: StrNotEmpty(paramValue)})
+	if p.Owner.Connection.Dialect == ORACLE {
+		p.SetInputParam(paramName, goOra.Clob{String: paramValue, Valid: StrNotEmpty(paramValue)})
+	} else if p.Owner.Connection.Dialect == POSTGRESQL {
+		p.SetInputParam(paramName, []byte(paramValue))
+	} else {
+		p.SetInputParam(paramName, paramValue)
+	}
 	return p
 }
 
 func (p *Params) SetInputParamBlob(paramName string, paramValue []byte) *Params {
-	p.SetInputParam(paramName, goOra.Blob{Data: paramValue, Valid: len(paramValue) > 0})
+	if p.Owner.Connection.Dialect == ORACLE {
+		p.SetInputParam(paramName, goOra.Blob{Data: paramValue, Valid: len(paramValue) > 0})
+	} else if p.Owner.Connection.Dialect == POSTGRESQL {
+		p.SetInputParam(paramName, paramValue)
+	} else {
+		p.SetInputParam(paramName, paramValue)
+	}
 	return p
 }
 
