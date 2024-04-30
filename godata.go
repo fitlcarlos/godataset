@@ -66,6 +66,7 @@ func NewDataSet(db *Conn) *DataSet {
 		MasterSource: NewMasterSource(),
 	}
 	ds.Fields.Owner = ds
+	ds.Params.Owner = ds
 
 	return ds
 }
