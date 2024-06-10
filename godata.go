@@ -72,16 +72,8 @@ func NewDataSet(db *Conn) *DataSet {
 }
 
 func NewDataSetTx(tx *Transaction) *DataSet {
-	ds := &DataSet{
-		Tx:           tx,
-		Index:        0,
-		Recno:        0,
-		Fields:       NewFields(),
-		Params:       NewParams(),
-		Macros:       NewMacros(),
-		MasterSource: NewMasterSource(),
-	}
-	ds.Fields.Owner = ds
+	ds := NewDataSet(tx.Conn)
+	ds.Tx = tx
 
 	return ds
 }
@@ -96,9 +88,9 @@ func (ds *DataSet) Open() error {
 	ds.Index = 0
 	ds.Recno = 0
 
-	if len(ds.Fields.List) == 0 {
-		ds.CreateFields()
-	}
+	//if len(ds.Fields.List) == 0 {
+	//	ds.CreateFields()
+	//}
 
 	query := ds.GetSqlMasterDetail()
 
@@ -155,11 +147,11 @@ func (ds *DataSet) Open() error {
 		}
 	}
 
+	defer rows.Close()
+
 	if rows == nil {
 		return fmt.Errorf("rows empty")
 	}
-
-	defer rows.Close()
 
 	ds.scan(rows)
 
@@ -173,9 +165,9 @@ func (ds *DataSet) OpenContext(context context.Context) error {
 	ds.Index = 0
 	ds.Recno = 0
 
-	if len(ds.Fields.List) == 0 {
-		ds.CreateFields()
-	}
+	//if len(ds.Fields.List) == 0 {
+	//	ds.CreateFields()
+	//}
 
 	query := ds.GetSqlMasterDetail()
 
@@ -232,6 +224,7 @@ func (ds *DataSet) OpenContext(context context.Context) error {
 	defer rows.Close()
 
 	ds.scan(rows)
+	rows = nil
 
 	ds.First()
 
@@ -254,6 +247,7 @@ func (ds *DataSet) Close() {
 	ds.Macros = NewMacros()
 	ds.MasterSource = NewMasterSource()
 	ds.Fields.Owner = ds
+	ds.Params.Owner = ds
 }
 
 func (ds *DataSet) CloseNoClearSQL() {
@@ -271,6 +265,7 @@ func (ds *DataSet) CloseNoClearSQL() {
 	ds.Macros = NewMacros()
 	ds.MasterSource = NewMasterSource()
 	ds.Fields.Owner = ds
+	ds.Params.Owner = ds
 }
 
 func (ds *DataSet) Exec() (sql.Result, error) {
@@ -338,6 +333,75 @@ func (ds *DataSet) ExecContext(context context.Context) (sql.Result, error) {
 	return stmt.ExecContext(context, ds.GetParams()...)
 }
 
+func (ds *DataSet) ExecBatch(size int) error {
+
+	var stmt *sql.Stmt
+	var err error
+
+	query := ds.GetSql()
+
+	if ds.Tx != nil {
+		if ds.Tx.Conn.log {
+			fmt.Println(query)
+			ds.PrintParam()
+		}
+
+		if ds.Ctx != nil {
+			stmt, err = ds.Tx.tx.PrepareContext(ds.Ctx, query)
+		} else {
+			stmt, err = ds.Tx.tx.Prepare(query)
+		}
+
+		defer func() {
+			_ = stmt.Close()
+		}()
+
+		if err != nil {
+			return err
+		}
+
+	} else {
+		if ds.Connection.log {
+			fmt.Println(query)
+			ds.PrintParam()
+		}
+
+		if ds.Ctx != nil {
+			stmt, err = ds.Connection.DB.PrepareContext(ds.Ctx, query)
+		} else {
+			stmt, err = ds.Connection.DB.Prepare(query)
+		}
+
+		defer func() {
+			_ = stmt.Close()
+		}()
+
+		if err != nil {
+			return err
+		}
+	}
+
+	if ds.Ctx != nil {
+		for i := 0; i < ds.Params.BatchSize; i++ {
+			_, err = stmt.ExecContext(ds.Ctx, ds.GetParamsBatch(i)...)
+
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		for i := 0; i < ds.Params.BatchSize; i++ {
+			_, err = stmt.Exec(ds.GetParamsBatch(i)...)
+
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func (ds *DataSet) Delete() (int64, error) {
 
 	var result sql.Result
@@ -395,7 +459,7 @@ func (ds *DataSet) GetSql() (sql string) {
 	}
 	sql = strings.Replace(sql, "\r", "\n", -1)
 	sql = strings.Replace(sql, "\n", "\n ", -1)
-	sql = ds.replaceParam(sql)
+	sql = ds.replaceAllParam(sql)
 
 	return sql
 }
@@ -430,7 +494,7 @@ func (ds *DataSet) GetSqlMasterDetail() (vsql string) {
 
 	vsql = strings.Replace(vsql, "\r", "\n", -1)
 	vsql = strings.Replace(vsql, "\n", "\n ", -1)
-	vsql = ds.replaceParam(vsql)
+	vsql = ds.replaceAllParam(vsql)
 
 	return vsql
 }
@@ -441,6 +505,25 @@ func (ds *DataSet) GetParams() []any {
 	for i := 0; i < len(ds.Params.List); i++ {
 		key := ds.Params.List[i].Name
 		value := ds.Params.List[i].Value.Value
+
+		switch ds.Params.List[i].ParamType {
+		case IN:
+			param = append(param, sql.Named(key, value))
+		case OUT:
+			param = append(param, sql.Named(key, sql.Out{Dest: value}))
+		case INOUT:
+			param = append(param, sql.Named(key, sql.Out{Dest: value, In: true}))
+		}
+	}
+	return param
+}
+
+func (ds *DataSet) GetParamsBatch(index int) []any {
+	var param []any
+
+	for i := 0; i < len(ds.Params.List); i++ {
+		key := ds.Params.List[i].Name
+		value := ds.Params.List[i].Values[index].Value
 
 		switch ds.Params.List[i].ParamType {
 		case IN:
@@ -474,6 +557,60 @@ func (ds *DataSet) scan(list *sql.Rows) {
 	fieldTypes, _ := list.ColumnTypes()
 	fields, _ := list.Columns()
 
+	if len(ds.Fields.List) == 0 {
+		for i := 0; i < len(fields); i++ {
+			field := ds.Fields.Add(fields[i])
+			field.DataType = fieldTypes[i]
+			switch field.DataType.ScanType().Kind() {
+			case reflect.String:
+				field.IDataType = new(DataType) //inicializa por é um ponteiro
+				*field.IDataType = Text
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				field.IDataType = new(DataType) //inicializa por é um ponteiro
+				*field.IDataType = Integer
+			case reflect.Float32, reflect.Float64:
+				field.IDataType = new(DataType) //inicializa por é um ponteiro
+				*field.IDataType = Float
+			case reflect.Struct:
+				if field.DataType.ScanType() == reflect.TypeOf(time.Time{}) {
+					field.IDataType = new(DataType) //inicializa por é um ponteiro
+					*field.IDataType = DateTime
+				}
+			case reflect.Bool:
+				field.IDataType = new(DataType) //inicializa por é um ponteiro
+				*field.IDataType = Boolean
+			}
+			field.Order = i + 1
+			field.Index = i
+		}
+	} else {
+		for i := 0; i < len(ds.Fields.List); i++ {
+			field := ds.Fields.List[i]
+			field.DataType = fieldTypes[i]
+			switch field.DataType.ScanType().Kind() {
+			case reflect.String:
+				field.IDataType = new(DataType) //inicializa por é um ponteiro
+				*field.IDataType = Text
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				field.IDataType = new(DataType) //inicializa por é um ponteiro
+				*field.IDataType = Integer
+			case reflect.Float32, reflect.Float64:
+				field.IDataType = new(DataType) //inicializa por é um ponteiro
+				*field.IDataType = Float
+			case reflect.Struct:
+				if field.DataType.ScanType() == reflect.TypeOf(time.Time{}) {
+					field.IDataType = new(DataType) //inicializa por é um ponteiro
+					*field.IDataType = DateTime
+				}
+			case reflect.Bool:
+				field.IDataType = new(DataType) //inicializa por é um ponteiro
+				*field.IDataType = Boolean
+			}
+			field.Order = i + 1
+			field.Index = i
+		}
+	}
+
 	for list.Next() {
 		columns := make([]any, len(fields))
 
@@ -490,11 +627,6 @@ func (ds *DataSet) scan(list *sql.Rows) {
 		row := NewRow()
 
 		for i := 0; i < len(columns); i++ {
-			field := ds.Fields.Add(fields[i])
-			field.DataType = fieldTypes[i]
-			field.Order = i + 1
-			field.Index = i
-
 			row.List[strings.ToUpper(fields[i])] = &Variant{
 				Value: columns[i],
 			}
@@ -837,6 +969,7 @@ func (ds *DataSet) toStructList(modelValue reflect.Value) error {
 		modelType = modelValue.Type().Elem()
 	}
 
+	ds.First()
 	for !ds.Eof() {
 		newModel := reflect.New(modelType)
 
@@ -941,21 +1074,63 @@ func StrNotEmpty(s string) bool {
 	return false
 }
 
-func (ds *DataSet) replaceParam(sql string) string {
-	var dialect DialectType
+func (ds *DataSet) replaceAllParam(sql string) (newSql string) {
+	newSql = sql
 
+	var dialect DialectType
 	if ds.Tx != nil {
 		dialect = ds.Tx.Conn.Dialect
 	} else {
 		dialect = ds.Connection.Dialect
 	}
 
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("error replaceParam", err)
+			return
+		}
+	}()
+
 	switch dialect {
 	case POSTGRESQL:
 		for i := 0; i < len(ds.Params.List); i++ {
-			sql = strings.Replace(sql, ":"+ds.Params.List[i].Name, "$"+fmt.Sprint(i+1), -1)
+			param := ":" + ds.Params.List[i].Name
+			newSql, _ = replaceParamPG(newSql, param, i+1)
+		}
+	}
+	return
+}
+
+func replaceParamPG(sql, param string, paramNumber int) (string, int) {
+	pSize := len(param)
+
+	i := strings.Index(sql, param)
+
+	var ok bool
+	switch {
+
+	case i == -1:
+		return sql, paramNumber
+
+	case i == len(sql)-pSize:
+		ok = true
+
+	default:
+
+		switch string(sql[i+pSize]) {
+		case " ", ",", "(", ")", "=", "|", "[", "]":
+			ok = true
 		}
 	}
 
-	return sql
+	start := sql[:i]
+	end, paramNumber := replaceParamPG(sql[i+pSize:], param, paramNumber)
+
+	if ok {
+		sql = fmt.Sprintf("%s$%d%s", start, paramNumber, end)
+	} else {
+		sql = start + param + end
+	}
+
+	return sql, paramNumber
 }
