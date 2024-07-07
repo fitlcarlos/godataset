@@ -699,3 +699,28 @@ func TestDataSetDateTime(t *testing.T) {
 	//
 	//fmt.Println(ds.findFieldByName("vdata").AsDateTime())
 }
+
+func TestSelectMySql(t *testing.T) {
+	t.Log("Sucesso.")
+
+	//connectStr := "oracle://nbsama:new@100.0.65.224:1521/fab"
+
+	connectStr := "datasales:Da7a53735!C7M!@tcp(35.94.127.67:3306)/datasales?checkConnLiveness=false&maxAllowedPacket=0"
+
+	db, err := NewConnectionMySql(connectStr)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer db.Close()
+
+	ds := NewDataSet(db)
+	err = ds.
+		AddSql("select id_bot_campanha_config, id_bot, id_empresa, id_instancia").
+		AddSql("from bot_campanha_config where id_bot = :id_bot").
+		SetInputParam("id_bot", 1746).
+		Open()
+
+	fmt.Println(ds.findFieldByName("id_empresa").AsInt())
+}

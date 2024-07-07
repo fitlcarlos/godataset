@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/sijms/go-ora/v2"
 	"strconv"
@@ -162,6 +163,7 @@ func (co *Conn) Close() {
 	if err := co.DB.Close(); err != nil {
 		return
 	}
+	co.DB = nil
 }
 
 func (co *Conn) NewDataSet() *DataSet {

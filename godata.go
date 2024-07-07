@@ -97,6 +97,13 @@ func (ds *DataSet) Open() error {
 	var rows *sql.Rows
 	var err error
 
+	defer func() {
+		if rows != nil {
+			rows.Close()
+			rows = nil
+		}
+	}()
+
 	if ds.Tx != nil {
 		if ds.Tx.Conn.log {
 			fmt.Println(query)
@@ -146,8 +153,6 @@ func (ds *DataSet) Open() error {
 			}
 		}
 	}
-
-	defer rows.Close()
 
 	if rows == nil {
 		return fmt.Errorf("rows empty")
@@ -502,17 +507,29 @@ func (ds *DataSet) GetSqlMasterDetail() (vsql string) {
 func (ds *DataSet) GetParams() []any {
 	var param []any
 
+	var dialect DialectType
+	if ds.Tx != nil {
+		dialect = ds.Tx.Conn.Dialect
+	} else {
+		dialect = ds.Connection.Dialect
+	}
+
 	for i := 0; i < len(ds.Params.List); i++ {
 		key := ds.Params.List[i].Name
 		value := ds.Params.List[i].Value.Value
 
-		switch ds.Params.List[i].ParamType {
-		case IN:
-			param = append(param, sql.Named(key, value))
-		case OUT:
-			param = append(param, sql.Named(key, sql.Out{Dest: value}))
-		case INOUT:
-			param = append(param, sql.Named(key, sql.Out{Dest: value, In: true}))
+		switch dialect {
+		case MYSQL:
+			param = append(param, value)
+		default:
+			switch ds.Params.List[i].ParamType {
+			case IN:
+				param = append(param, sql.Named(key, value))
+			case OUT:
+				param = append(param, sql.Named(key, sql.Out{Dest: value}))
+			case INOUT:
+				param = append(param, sql.Named(key, sql.Out{Dest: value, In: true}))
+			}
 		}
 	}
 	return param
@@ -561,24 +578,26 @@ func (ds *DataSet) scan(list *sql.Rows) {
 		for i := 0; i < len(fields); i++ {
 			field := ds.Fields.Add(fields[i])
 			field.DataType = fieldTypes[i]
-			switch field.DataType.ScanType().Kind() {
-			case reflect.String:
-				field.IDataType = new(DataType) //inicializa por é um ponteiro
-				*field.IDataType = Text
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				field.IDataType = new(DataType) //inicializa por é um ponteiro
-				*field.IDataType = Integer
-			case reflect.Float32, reflect.Float64:
-				field.IDataType = new(DataType) //inicializa por é um ponteiro
-				*field.IDataType = Float
-			case reflect.Struct:
-				if field.DataType.ScanType() == reflect.TypeOf(time.Time{}) {
+			if field.IDataType == nil {
+				switch field.DataType.ScanType().Kind() {
+				case reflect.String:
 					field.IDataType = new(DataType) //inicializa por é um ponteiro
-					*field.IDataType = DateTime
+					*field.IDataType = Text
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+					field.IDataType = new(DataType) //inicializa por é um ponteiro
+					*field.IDataType = Integer
+				case reflect.Float32, reflect.Float64:
+					field.IDataType = new(DataType) //inicializa por é um ponteiro
+					*field.IDataType = Float
+				case reflect.Struct:
+					if field.DataType.ScanType() == reflect.TypeOf(time.Time{}) {
+						field.IDataType = new(DataType) //inicializa por é um ponteiro
+						*field.IDataType = DateTime
+					}
+				case reflect.Bool:
+					field.IDataType = new(DataType) //inicializa por é um ponteiro
+					*field.IDataType = Boolean
 				}
-			case reflect.Bool:
-				field.IDataType = new(DataType) //inicializa por é um ponteiro
-				*field.IDataType = Boolean
 			}
 			field.Order = i + 1
 			field.Index = i
@@ -587,24 +606,26 @@ func (ds *DataSet) scan(list *sql.Rows) {
 		for i := 0; i < len(ds.Fields.List); i++ {
 			field := ds.Fields.List[i]
 			field.DataType = fieldTypes[i]
-			switch field.DataType.ScanType().Kind() {
-			case reflect.String:
-				field.IDataType = new(DataType) //inicializa por é um ponteiro
-				*field.IDataType = Text
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				field.IDataType = new(DataType) //inicializa por é um ponteiro
-				*field.IDataType = Integer
-			case reflect.Float32, reflect.Float64:
-				field.IDataType = new(DataType) //inicializa por é um ponteiro
-				*field.IDataType = Float
-			case reflect.Struct:
-				if field.DataType.ScanType() == reflect.TypeOf(time.Time{}) {
+			if field.IDataType == nil {
+				switch field.DataType.ScanType().Kind() {
+				case reflect.String:
 					field.IDataType = new(DataType) //inicializa por é um ponteiro
-					*field.IDataType = DateTime
+					*field.IDataType = Text
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+					field.IDataType = new(DataType) //inicializa por é um ponteiro
+					*field.IDataType = Integer
+				case reflect.Float32, reflect.Float64:
+					field.IDataType = new(DataType) //inicializa por é um ponteiro
+					*field.IDataType = Float
+				case reflect.Struct:
+					if field.DataType.ScanType() == reflect.TypeOf(time.Time{}) {
+						field.IDataType = new(DataType) //inicializa por é um ponteiro
+						*field.IDataType = DateTime
+					}
+				case reflect.Bool:
+					field.IDataType = new(DataType) //inicializa por é um ponteiro
+					*field.IDataType = Boolean
 				}
-			case reflect.Bool:
-				field.IDataType = new(DataType) //inicializa por é um ponteiro
-				*field.IDataType = Boolean
 			}
 			field.Order = i + 1
 			field.Index = i
@@ -1092,6 +1113,11 @@ func (ds *DataSet) replaceAllParam(sql string) (newSql string) {
 	}()
 
 	switch dialect {
+	case MYSQL:
+		for i := 0; i < len(ds.Params.List); i++ {
+			param := ":" + ds.Params.List[i].Name
+			newSql, _ = replaceParamMYSQL(newSql, param, i+1)
+		}
 	case POSTGRESQL:
 		for i := 0; i < len(ds.Params.List); i++ {
 			param := ":" + ds.Params.List[i].Name
@@ -1128,6 +1154,40 @@ func replaceParamPG(sql, param string, paramNumber int) (string, int) {
 
 	if ok {
 		sql = fmt.Sprintf("%s$%d%s", start, paramNumber, end)
+	} else {
+		sql = start + param + end
+	}
+
+	return sql, paramNumber
+}
+
+func replaceParamMYSQL(sql, param string, paramNumber int) (string, int) {
+	pSize := len(param)
+
+	i := strings.Index(sql, param)
+
+	var ok bool
+	switch {
+
+	case i == -1:
+		return sql, paramNumber
+
+	case i == len(sql)-pSize:
+		ok = true
+
+	default:
+
+		switch string(sql[i+pSize]) {
+		case " ", ",", "(", ")", "=", "|", "[", "]":
+			ok = true
+		}
+	}
+
+	start := sql[:i]
+	end, paramNumber := replaceParamPG(sql[i+pSize:], param, paramNumber)
+
+	if ok {
+		sql = fmt.Sprintf("%s?%s", start, end)
 	} else {
 		sql = start + param + end
 	}
