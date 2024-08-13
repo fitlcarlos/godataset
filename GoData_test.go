@@ -705,7 +705,7 @@ func TestSelectMySql(t *testing.T) {
 
 	//connectStr := "oracle://nbsama:new@100.0.65.224:1521/fab"
 
-	connectStr := "datasales:Da7a53735!C7M!@tcp(35.94.127.67:3306)/datasales?checkConnLiveness=false&maxAllowedPacket=0"
+	connectStr := "datasales:Da7a53735!C7M!@tcp(35.94.127.67:3306)/datasales?checkConnLiveness=false&maxAllowedPacket=0&parseTime=true"
 
 	db, err := NewConnectionMySql(connectStr)
 
@@ -717,10 +717,10 @@ func TestSelectMySql(t *testing.T) {
 
 	ds := NewDataSet(db)
 	err = ds.
-		AddSql("select id_bot_campanha_config, id_bot, id_empresa, id_instancia").
-		AddSql("from bot_campanha_config where id_bot = :id_bot").
-		SetInputParam("id_bot", 1746).
+		AddSql("select id_bot_campanha_config, status, data_inicio_envio, data_fim_envio").
+		AddSql("from bot_campanha_config where id_bot_campanha_config = :id_bot_campanha_config").
+		SetInputParam("id_bot_campanha_config", 869).
 		Open()
 
-	fmt.Println(ds.findFieldByName("id_empresa").AsInt())
+	fmt.Println(ds.FieldByName("data_inicio_envio").AsDateTime())
 }

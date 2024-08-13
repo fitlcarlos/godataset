@@ -590,7 +590,8 @@ func (ds *DataSet) scan(list *sql.Rows) {
 					field.IDataType = new(DataType) //inicializa por é um ponteiro
 					*field.IDataType = Float
 				case reflect.Struct:
-					if field.DataType.ScanType() == reflect.TypeOf(time.Time{}) {
+					switch field.DataType.ScanType() {
+					case reflect.TypeOf(time.Time{}), reflect.TypeOf(sql.NullTime{}):
 						field.IDataType = new(DataType) //inicializa por é um ponteiro
 						*field.IDataType = DateTime
 					}
