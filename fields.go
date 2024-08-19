@@ -14,6 +14,7 @@ func NewFields() *Fields {
 	fields := &Fields{
 		List: []*Field{},
 	}
+
 	return fields
 }
 
@@ -58,6 +59,7 @@ func (fd *Fields) Add(fieldName string) *Field {
 }
 
 func (fd *Fields) Clear() *Fields {
+	clear(fd.List)
 	fd.List = nil
 	return fd
 }

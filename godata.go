@@ -3,6 +3,7 @@ package godata
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/aoticombr/golang/preprocesssql"
@@ -754,10 +755,6 @@ func (ds *DataSet) Prepare() error {
 
 }
 
-func (ds *DataSet) findFieldByName(fieldName string) *Field {
-	return ds.Fields.FindFieldByName(fieldName)
-}
-
 func (ds *DataSet) FieldByName(fieldName string) *Field {
 	return ds.Fields.FieldByName(fieldName)
 }
@@ -1020,6 +1017,15 @@ func (ds *DataSet) toStructList(modelValue reflect.Value) error {
 	return nil
 }
 
+func (ds *DataSet) ToStructJson(model any) ([]byte, error) {
+	err := ds.ToStruct(model)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(model)
+
+}
+
 func JoinSlice(list any) string {
 	valueOf := reflect.ValueOf(list)
 	value := make([]string, valueOf.Len())
@@ -1128,9 +1134,14 @@ func (ds *DataSet) replaceAllParam(sql string) (newSql string) {
 	return
 }
 
+func (ds *DataSet) Free() {
+	ds = nil
+}
+
 func replaceParamPG(sql, param string, paramNumber int) (string, int) {
 	pSize := len(param)
 
+	//Localiza o indice da primeira letra do nome do parametro.
 	i := strings.Index(sql, param)
 
 	var ok bool
@@ -1143,9 +1154,8 @@ func replaceParamPG(sql, param string, paramNumber int) (string, int) {
 		ok = true
 
 	default:
-
 		switch string(sql[i+pSize]) {
-		case " ", ",", "(", ")", "=", "|", "[", "]":
+		case " ", ",", "(", ")", "=", "|", "[", "]", ":":
 			ok = true
 		}
 	}

@@ -33,19 +33,12 @@ func (p *Params) FindParamByName(paramName string) *Param {
 }
 
 func (p *Params) ParamByName(paramName string) *Param {
-	var param *Param
-	for i := 0; i < len(p.List); i++ {
-		if strings.ToUpper(p.List[i].Name) == strings.ToUpper(paramName) {
-			param = p.List[i]
-		}
+	if param := p.FindParamByName(paramName); param != nil {
+		return param
 	}
 
-	if param == nil {
-		param = &Param{}
-		fmt.Println("Parameter " + paramName + " doesn't exists")
-	}
-
-	return param
+	fmt.Println("Parameter " + paramName + " doesn't exists")
+	return &Param{}
 }
 
 func (p *Params) Add(paramName string) *Param {

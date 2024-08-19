@@ -7,7 +7,10 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/sijms/go-ora/v2"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -24,6 +27,27 @@ type Conn struct {
 }
 
 func NewConnection(dialect DialectType, dsn string) (*Conn, error) {
+	switch dialect {
+	case ORACLE:
+		return NewConnectionOracle(dsn)
+	case POSTGRESQL:
+		return NewConnectionPostgres(dsn)
+	case FIREBIRD:
+		return NewConnectionFirebird(dsn)
+	case INTERBASE:
+		return NewConnectionInterbase(dsn)
+	case MYSQL:
+		return NewConnectionMySql(dsn)
+	case SQLITE:
+		return NewConnectionSqLite(dsn)
+	case SQLSERVER:
+		return NewConnectionSqlServer(dsn)
+	default:
+		return nil, nil
+	}
+}
+
+func newConnection(dialect DialectType, dsn string) (*Conn, error) {
 	conn := &Conn{
 		Dialect:  dialect,
 		DSN:      dsn,
@@ -47,6 +71,14 @@ func NewConnectionOracle(dsn string) (*Conn, error) {
 }
 
 func NewConnectionPostgres(dsn string) (*Conn, error) {
+	if !strings.Contains(dsn, "application_name") {
+		if strings.Contains(dsn, "?") {
+			dsn = dsn + "&application_name=" + GetApplicationName()
+		} else {
+			dsn = dsn + "?application_name=" + GetApplicationName()
+		}
+	}
+
 	return NewConnection(POSTGRESQL, dsn)
 }
 
@@ -179,4 +211,10 @@ func (co *Conn) NewDataSet() *DataSet {
 	ds.Fields.Owner = ds
 
 	return ds
+}
+
+func GetApplicationName() string {
+	execPath, _ := os.Executable()
+	_, execName := filepath.Split(execPath)
+	return execName
 }
