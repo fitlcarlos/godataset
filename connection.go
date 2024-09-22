@@ -67,7 +67,7 @@ func NewConnectionOracle(dsn string) (*Conn, error) {
 
 	timout := strconv.FormatInt(int64(time.Minute*60), 10)
 
-	return NewConnection(ORACLE, dsn+"?connection timeout="+timout+"&lob fetch=post")
+	return newConnection(ORACLE, dsn+"?connection timeout="+timout+"&lob fetch=post")
 }
 
 func NewConnectionPostgres(dsn string) (*Conn, error) {
@@ -79,19 +79,19 @@ func NewConnectionPostgres(dsn string) (*Conn, error) {
 		}
 	}
 
-	return NewConnection(POSTGRESQL, dsn)
+	return newConnection(POSTGRESQL, dsn)
 }
 
 func NewConnectionFirebird(dsn string) (*Conn, error) {
-	return NewConnection(FIREBIRD, dsn)
+	return newConnection(FIREBIRD, dsn)
 }
 
 func NewConnectionInterbase(dsn string) (*Conn, error) {
-	return NewConnection(INTERBASE, dsn)
+	return newConnection(INTERBASE, dsn)
 }
 
 func NewConnectionMySql(dsn string) (*Conn, error) {
-	return NewConnection(MYSQL, dsn)
+	return newConnection(MYSQL, dsn)
 }
 
 func NewConnectionSqLite(dsn string) (*Conn, error) {
@@ -99,7 +99,7 @@ func NewConnectionSqLite(dsn string) (*Conn, error) {
 }
 
 func NewConnectionSqlServer(dsn string) (*Conn, error) {
-	return NewConnection(SQLSERVER, dsn)
+	return newConnection(SQLSERVER, dsn)
 }
 
 func (co *Conn) EnableLog() {

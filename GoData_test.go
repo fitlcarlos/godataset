@@ -464,20 +464,20 @@ func TestDataSetPostgres(t *testing.T) {
 
 	t.Log("Sucesso.")
 
-	//connectStr := "postgres://postgres:manager@100.0.65.53:5432/nbs_status_api?sslmode=disable"
-	//
-	//db, err := NewConnection(DialectType(POSTGRESQL), connectStr)
-	//db.EnableLog()
-	//
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//
-	//defer db.Close()
-	//
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
+	connectStr := "postgres://postgres:100651xpto@localhost:5432/erp?sslmode=disable"
+
+	db, err := NewConnection(DialectType(POSTGRESQL), connectStr)
+	db.EnableLog()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer db.Close()
+
+	if err != nil {
+		t.Fatal(err)
+	}
 	//
 	//ds := db.NewDataSet()
 	//
