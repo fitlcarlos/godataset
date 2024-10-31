@@ -172,3 +172,14 @@ func (p *Params) PrintParam() {
 		fmt.Println("Colum:", key, "Value:", value.AsValue(), "Type:", reflect.TypeOf(value.AsValue()))
 	}
 }
+
+func (p *Params) Count() int {
+	return len(p.List)
+}
+
+func (p *Params) Clear() *Params {
+	p.Owner = nil
+	ClearSlice(p.List)
+	p.List = nil
+	return p
+}

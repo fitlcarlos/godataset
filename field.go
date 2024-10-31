@@ -129,8 +129,8 @@ func (field *Field) IsNotNull() bool {
 	return field.getVariant().SetSilent(field.Owner.Owner.Silent).IsNotNull()
 }
 
-func (field *Field) getVariant() *Variant {
-	var variant *Variant
+func (field *Field) getVariant() Variant {
+	var variant Variant
 
 	if field.Owner != nil {
 		if field.Owner.Owner != nil {
@@ -139,10 +139,6 @@ func (field *Field) getVariant() *Variant {
 				variant = field.Owner.Owner.Rows[index].List[strings.ToUpper(field.Name)]
 			}
 		}
-	}
-
-	if variant == nil {
-		return &Variant{}
 	}
 
 	return variant

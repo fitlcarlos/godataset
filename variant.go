@@ -15,16 +15,16 @@ type Variant struct {
 	Silent bool
 }
 
-func (v *Variant) SetSilent(value bool) *Variant {
+func (v Variant) SetSilent(value bool) Variant {
 	v.Silent = value
 	return v
 }
 
-func (v *Variant) AsValue() any {
+func (v Variant) AsValue() any {
 	return v.Value
 }
 
-func (v *Variant) AsString() string {
+func (v Variant) AsString() string {
 	value := ""
 	switch val := v.Value.(type) {
 	case nil:
@@ -50,10 +50,11 @@ func (v *Variant) AsString() string {
 
 		value = ""
 	}
-	value = strings.Replace(value, "\r", "\n", -1)
+	//comentado esta cagando no AsByte()
+	//value = strings.Replace(value, "\r", "\n", -1)
 	return value
 }
-func (v *Variant) AsStringNil() *string {
+func (v Variant) AsStringNil() *string {
 	valor := v.AsValue()
 	var tvalor any
 
@@ -68,7 +69,7 @@ func (v *Variant) AsStringNil() *string {
 		return nil
 	}
 }
-func (v *Variant) AsInt() int {
+func (v Variant) AsInt() int {
 	switch val := v.Value.(type) {
 	case nil:
 		return 0
@@ -116,7 +117,7 @@ func (v *Variant) AsInt() int {
 		return 0
 	}
 }
-func (v *Variant) AsIntNil() *int {
+func (v Variant) AsIntNil() *int {
 	valor := v.AsValue()
 	var tvalor any
 
@@ -131,7 +132,7 @@ func (v *Variant) AsIntNil() *int {
 		return nil
 	}
 }
-func (v *Variant) AsInt8() int8 {
+func (v Variant) AsInt8() int8 {
 	switch val := v.Value.(type) {
 	case nil:
 		return int8(0)
@@ -179,7 +180,7 @@ func (v *Variant) AsInt8() int8 {
 		return int8(0)
 	}
 }
-func (v *Variant) AsInt8Nil() *int8 {
+func (v Variant) AsInt8Nil() *int8 {
 	valor := v.AsValue()
 	var tvalor any
 
@@ -194,7 +195,7 @@ func (v *Variant) AsInt8Nil() *int8 {
 		return nil
 	}
 }
-func (v *Variant) AsInt16() int16 {
+func (v Variant) AsInt16() int16 {
 	switch val := v.Value.(type) {
 	case nil:
 		return int16(0)
@@ -242,7 +243,7 @@ func (v *Variant) AsInt16() int16 {
 		return int16(0)
 	}
 }
-func (v *Variant) AsInt16Nil() *int16 {
+func (v Variant) AsInt16Nil() *int16 {
 	valor := v.AsValue()
 	var tvalor any
 
@@ -257,7 +258,7 @@ func (v *Variant) AsInt16Nil() *int16 {
 		return nil
 	}
 }
-func (v *Variant) AsInt32() int32 {
+func (v Variant) AsInt32() int32 {
 	switch val := v.Value.(type) {
 	case nil:
 		return int32(0)
@@ -309,7 +310,7 @@ func (v *Variant) AsInt32() int32 {
 		return int32(0)
 	}
 }
-func (v *Variant) AsInt32Nil() *int32 {
+func (v Variant) AsInt32Nil() *int32 {
 	valor := v.AsValue()
 	var tvalor any
 
@@ -324,7 +325,7 @@ func (v *Variant) AsInt32Nil() *int32 {
 		return nil
 	}
 }
-func (v *Variant) AsInt64() int64 {
+func (v Variant) AsInt64() int64 {
 	switch val := v.Value.(type) {
 	case nil:
 		return int64(0)
@@ -376,7 +377,7 @@ func (v *Variant) AsInt64() int64 {
 		return int64(0)
 	}
 }
-func (v *Variant) AsInt64Nil() *int64 {
+func (v Variant) AsInt64Nil() *int64 {
 	valor := v.AsValue()
 	var tvalor any
 
@@ -391,7 +392,7 @@ func (v *Variant) AsInt64Nil() *int64 {
 		return nil
 	}
 }
-func (v *Variant) AsFloat() float32 {
+func (v Variant) AsFloat() float32 {
 	switch val := v.Value.(type) {
 	case nil:
 		return float32(0)
@@ -443,7 +444,7 @@ func (v *Variant) AsFloat() float32 {
 		return float32(0)
 	}
 }
-func (v *Variant) AsFloatNil() *float32 {
+func (v Variant) AsFloatNil() *float32 {
 	valor := v.AsValue()
 	var tvalor any
 
@@ -458,7 +459,7 @@ func (v *Variant) AsFloatNil() *float32 {
 		return nil
 	}
 }
-func (v *Variant) AsFloat64() float64 {
+func (v Variant) AsFloat64() float64 {
 	switch val := v.Value.(type) {
 	case nil:
 		return float64(0)
@@ -510,7 +511,7 @@ func (v *Variant) AsFloat64() float64 {
 		return float64(0)
 	}
 }
-func (v *Variant) AsFloat64Nil() *float64 {
+func (v Variant) AsFloat64Nil() *float64 {
 	valor := v.AsValue()
 	var tvalor any
 
@@ -525,7 +526,7 @@ func (v *Variant) AsFloat64Nil() *float64 {
 		return nil
 	}
 }
-func (v *Variant) AsBool() bool {
+func (v Variant) AsBool() bool {
 	switch val := v.Value.(type) {
 	case nil:
 		return false
@@ -559,7 +560,7 @@ func (v *Variant) AsBool() bool {
 		return false
 	}
 }
-func (v *Variant) AsBoolNil() *bool {
+func (v Variant) AsBoolNil() *bool {
 	valor := v.AsValue()
 	var tvalor any
 
@@ -574,7 +575,7 @@ func (v *Variant) AsBoolNil() *bool {
 		return nil
 	}
 }
-func (v *Variant) AsDateTime() time.Time {
+func (v Variant) AsDateTime() time.Time {
 	switch val := v.Value.(type) {
 	case nil:
 		data, _ := time.Parse(time.DateTime, time.DateTime)
@@ -613,7 +614,7 @@ func (v *Variant) AsDateTime() time.Time {
 	}
 }
 
-func (v *Variant) AsDateTimeNil() *time.Time {
+func (v Variant) AsDateTimeNil() *time.Time {
 	valor := v.AsValue()
 	var tvalor any
 
@@ -629,7 +630,7 @@ func (v *Variant) AsDateTimeNil() *time.Time {
 	}
 }
 
-func (v *Variant) AsByte() []byte {
+func (v Variant) AsByte() []byte {
 	switch val := v.Value.(type) {
 	case nil:
 		return nil
@@ -651,7 +652,7 @@ func (v *Variant) AsByte() []byte {
 	}
 }
 
-func (v *Variant) AsByteNil() *[]byte {
+func (v Variant) AsByteNil() *[]byte {
 	valor := v.AsValue()
 	var tvalor any
 
@@ -666,7 +667,7 @@ func (v *Variant) AsByteNil() *[]byte {
 		return nil
 	}
 }
-func (v *Variant) IsNull() bool {
+func (v Variant) IsNull() bool {
 	switch val := v.Value.(type) {
 	case nil:
 		return true
@@ -677,7 +678,7 @@ func (v *Variant) IsNull() bool {
 	}
 }
 
-func (v *Variant) IsNotNull() bool {
+func (v Variant) IsNotNull() bool {
 	return !v.IsNull()
 }
 

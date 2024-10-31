@@ -95,7 +95,7 @@ func NewConnectionMySql(dsn string) (*Conn, error) {
 }
 
 func NewConnectionSqLite(dsn string) (*Conn, error) {
-	return NewConnection(SQLITE, dsn)
+	return newConnection(SQLITE, dsn)
 }
 
 func NewConnectionSqlServer(dsn string) (*Conn, error) {
@@ -121,10 +121,6 @@ func (co *Conn) Open() error {
 	db.SetMaxOpenConns(co.MaxOpenConns)
 	db.SetConnMaxIdleTime(co.PoolLifetime)
 	db.SetConnMaxLifetime(co.ConnLifetime)
-
-	if err = db.Ping(); err != nil {
-		return fmt.Errorf("database is not reachable: %w", err)
-	}
 
 	co.DB = db
 	co.connContext = false

@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aoticombr/golang/preprocesssql"
-	"github.com/blastrain/vitess-sqlparser/sqlparser"
+	//"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"io"
 	"reflect"
 	"strings"
@@ -55,6 +55,11 @@ type DataSet struct {
 	Silent          bool
 }
 
+type Lob struct {
+	io.Reader
+	IsClob bool
+}
+
 func NewDataSet(db *Conn) *DataSet {
 	ds := &DataSet{
 		Connection:   db,
@@ -84,79 +89,51 @@ func (ds *DataSet) AddContext(ctx context.Context) *DataSet {
 	return ds
 }
 
+func (ds *DataSet) OpenContext(context context.Context) error {
+	ds.Ctx = context
+	return ds.Open()
+}
+
 func (ds *DataSet) Open() error {
 	ds.Rows = nil
 	ds.Index = 0
 	ds.Recno = 0
 
-	//if len(ds.Fields.List) == 0 {
-	//	ds.CreateFields()
-	//}
-
 	query := ds.GetSqlMasterDetail()
 
-	var rows *sql.Rows
-	var err error
+	var (
+		rows *sql.Rows
+		err  error
+	)
 
 	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("open method failed. Error=", err)
+			return
+		}
 		if rows != nil {
 			rows.Close()
 			rows = nil
 		}
 	}()
 
-	if ds.Tx != nil {
-		if ds.Tx.Conn.log {
-			fmt.Println(query)
-			ds.PrintParam()
-		}
-
-		if ds.Ctx != nil {
-			rows, err = ds.Tx.tx.QueryContext(ds.Ctx, query, ds.GetParams()...)
-		} else {
-			rows, err = ds.Tx.tx.Query(query, ds.GetParams()...)
-		}
-
-		if err != nil {
+	rows, err = ds.open(query)
+	if err != nil {
+		if ds.hasTx() {
 			return err
 		}
-	} else {
-		if ds.Connection.log {
-			fmt.Println(query)
-			ds.PrintParam()
+
+		if err = ds.pingDB(); err != nil {
+			return err
 		}
 
-		if ds.Ctx != nil {
-			rows, err = ds.Connection.DB.QueryContext(ds.Ctx, query, ds.GetParams()...)
-		} else {
-			rows, err = ds.Connection.DB.Query(query, ds.GetParams()...)
-		}
-
-		if err != nil {
-			errPing := ds.Connection.DB.Ping()
-			if errPing != nil {
-				errConn := ds.Connection.Open()
-				if errConn != nil {
-					return err
-				}
-
-				if ds.Ctx != nil {
-					rows, err = ds.Connection.DB.QueryContext(ds.Ctx, query, ds.GetParams()...)
-				} else {
-					rows, err = ds.Connection.DB.Query(query, ds.GetParams()...)
-				}
-
-				if err != nil {
-					return err
-				}
-			} else {
-				return fmt.Errorf("could not open dataset %v\n", err)
-			}
+		if rows, err = ds.open(query); err != nil {
+			return err
 		}
 	}
 
 	if rows == nil {
-		return fmt.Errorf("rows empty")
+		return errors.New("rows empty")
 	}
 
 	ds.scan(rows)
@@ -166,103 +143,41 @@ func (ds *DataSet) Open() error {
 	return nil
 }
 
-func (ds *DataSet) OpenContext(context context.Context) error {
-	ds.Rows = nil
-	ds.Index = 0
-	ds.Recno = 0
+func (ds *DataSet) open(query string) (*sql.Rows, error) {
+	ds.printLog(query)
+	// Sem contexto
+	if ds.Ctx != nil {
+		if ds.hasTx() {
+			return ds.Tx.tx.QueryContext(ds.Ctx, query, ds.GetParams()...)
+		}
 
-	//if len(ds.Fields.List) == 0 {
-	//	ds.CreateFields()
-	//}
-
-	query := ds.GetSqlMasterDetail()
-
-	if ds.Connection.log {
-		fmt.Println(query)
-		ds.PrintParam()
+		return ds.Connection.DB.QueryContext(ds.Ctx, query, ds.GetParams()...)
 	}
 
-	var rows *sql.Rows
-	var err error
-
-	if ds.Tx != nil {
-		if ds.Tx.Conn.log {
-			fmt.Println(query)
-			ds.PrintParam()
-		}
-
-		rows, err = ds.Tx.Conn.DB.QueryContext(context, query, ds.GetParams()...)
-
-		if err != nil {
-			return err
-		}
-	} else {
-		if ds.Connection.log {
-			fmt.Println(query)
-			ds.PrintParam()
-		}
-
-		rows, err = ds.Connection.DB.QueryContext(context, query, ds.GetParams()...)
-
-		if err != nil {
-			errPing := ds.Connection.DB.PingContext(context)
-			if errPing != nil {
-				errConn := ds.Connection.Open()
-				if errConn != nil {
-					return err
-				}
-
-				rows, err = ds.Connection.DB.QueryContext(context, query, ds.GetParams()...)
-
-				if err != nil {
-					return err
-				}
-			} else {
-				return fmt.Errorf("could not open dataset %v\n", err)
-			}
-		}
+	// Com contexto
+	if ds.hasTx() {
+		return ds.Tx.tx.Query(query, ds.GetParams()...)
 	}
 
-	if rows == nil {
-		return fmt.Errorf("rows empty")
-	}
-
-	defer rows.Close()
-
-	ds.scan(rows)
-	rows = nil
-
-	ds.First()
-
-	return nil
+	return ds.Connection.DB.Query(query, ds.GetParams()...)
 }
 
 func (ds *DataSet) Close() {
-	ds.Index = 0
-	ds.Recno = 0
 	ds.Sql.Clear()
-	ds.Rows = nil
-	ds.Fields = nil
-	ds.Params = nil
-	ds.Macros = nil
-	ds.MasterSource = nil
-	ds.IndexFieldNames = ""
-
-	ds.Fields = NewFields()
-	ds.Params = NewParams()
-	ds.Macros = NewMacros()
-	ds.MasterSource = NewMasterSource()
-	ds.Fields.Owner = ds
-	ds.Params.Owner = ds
+	ds.CloseNoClearSQL()
 }
 
 func (ds *DataSet) CloseNoClearSQL() {
 	ds.Index = 0
 	ds.Recno = 0
 	ds.Rows = nil
+	ds.Fields.Clear()
 	ds.Fields = nil
+	ds.Params.Clear()
 	ds.Params = nil
+	ds.Macros.Clear()
 	ds.Macros = nil
+	ds.MasterSource.Clear()
 	ds.MasterSource = nil
 	ds.IndexFieldNames = ""
 
@@ -277,30 +192,20 @@ func (ds *DataSet) CloseNoClearSQL() {
 func (ds *DataSet) Exec() (sql.Result, error) {
 
 	query := ds.GetSql()
+	ds.printLog(query)
 
-	if ds.Tx != nil {
-		if ds.Tx.Conn.log {
-			fmt.Println(query)
-			ds.PrintParam()
-		}
-
-		if ds.Ctx != nil {
+	if ds.Ctx != nil {
+		if ds.hasTx() {
 			return ds.Tx.tx.ExecContext(ds.Ctx, query, ds.GetParams()...)
-		} else {
-			return ds.Tx.tx.Exec(query, ds.GetParams()...)
 		}
-	} else {
-		if ds.Connection.log {
-			fmt.Println(query)
-			ds.PrintParam()
-		}
-
-		if ds.Ctx != nil {
-			return ds.Connection.DB.ExecContext(ds.Ctx, query, ds.GetParams()...)
-		} else {
-			return ds.Connection.DB.Exec(query, ds.GetParams()...)
-		}
+		return ds.Connection.DB.ExecContext(ds.Ctx, query, ds.GetParams()...)
 	}
+
+	if ds.hasTx() {
+		return ds.Tx.tx.Exec(query, ds.GetParams()...)
+	}
+
+	return ds.Connection.DB.Exec(query, ds.GetParams()...)
 }
 
 func (ds *DataSet) ExecContext(context context.Context) (sql.Result, error) {
@@ -308,30 +213,16 @@ func (ds *DataSet) ExecContext(context context.Context) (sql.Result, error) {
 	var err error
 
 	vsql := ds.GetSql()
+	ds.printLog(vsql)
 
-	if ds.Tx != nil {
-		if ds.Tx.Conn.log {
-			fmt.Println(vsql)
-			ds.PrintParam()
-		}
-
+	if ds.hasTx() {
 		stmt, err = ds.Tx.tx.PrepareContext(context, vsql)
-
-		if err != nil {
-			return nil, err
-		}
-
 	} else {
-		if ds.Connection.log {
-			fmt.Println(vsql)
-			ds.PrintParam()
-		}
-
 		stmt, err = ds.Connection.DB.PrepareContext(context, vsql)
+	}
 
-		if err != nil {
-			return nil, err
-		}
+	if err != nil {
+		return nil, err
 	}
 
 	defer stmt.Close()
@@ -344,47 +235,33 @@ func (ds *DataSet) ExecBatch(size int) error {
 	var stmt *sql.Stmt
 	var err error
 
-	query := ds.GetSql()
-
-	if ds.Tx != nil {
-		if ds.Tx.Conn.log {
-			fmt.Println(query)
-			ds.PrintParam()
+	defer func() {
+		if stmt != nil {
+			stmt.Close()
 		}
+	}()
 
+	query := ds.GetSql()
+	ds.printLog(query)
+
+	if ds.hasTx() {
 		if ds.Ctx != nil {
 			stmt, err = ds.Tx.tx.PrepareContext(ds.Ctx, query)
 		} else {
 			stmt, err = ds.Tx.tx.Prepare(query)
 		}
+	}
 
-		defer func() {
-			_ = stmt.Close()
-		}()
-
-		if err != nil {
-			return err
-		}
-
-	} else {
-		if ds.Connection.log {
-			fmt.Println(query)
-			ds.PrintParam()
-		}
-
+	if !ds.hasTx() {
 		if ds.Ctx != nil {
 			stmt, err = ds.Connection.DB.PrepareContext(ds.Ctx, query)
 		} else {
 			stmt, err = ds.Connection.DB.Prepare(query)
 		}
+	}
 
-		defer func() {
-			_ = stmt.Close()
-		}()
-
-		if err != nil {
-			return err
-		}
+	if err != nil {
+		return err
 	}
 
 	if ds.Ctx != nil {
@@ -566,82 +443,71 @@ func (ds *DataSet) GetMacros() []any {
 	return macro
 }
 
-type Lob struct {
-	io.Reader
-	IsClob bool
+func (ds *DataSet) hasTx() bool {
+	return ds.Tx != nil
+}
+
+func (ds *DataSet) pingDB() error {
+	if err := ds.Connection.DB.Ping(); err != nil {
+		return ds.Connection.Open()
+	}
+	return nil
+}
+
+func (ds *DataSet) printLog(query string) {
+	if ds.Connection.log {
+		fmt.Println(query)
+		ds.PrintParam()
+	}
 }
 
 func (ds *DataSet) scan(list *sql.Rows) {
 	fieldTypes, _ := list.ColumnTypes()
 	fields, _ := list.Columns()
+	size := len(ds.Fields.List)
 
-	if len(ds.Fields.List) == 0 {
-		for i := 0; i < len(fields); i++ {
-			field := ds.Fields.Add(fields[i])
-			field.DataType = fieldTypes[i]
-			if field.IDataType == nil {
-				switch field.DataType.ScanType().Kind() {
-				case reflect.String:
-					field.IDataType = new(DataType) //inicializa por é um ponteiro
-					*field.IDataType = Text
-				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-					field.IDataType = new(DataType) //inicializa por é um ponteiro
-					*field.IDataType = Integer
-				case reflect.Float32, reflect.Float64:
-					field.IDataType = new(DataType) //inicializa por é um ponteiro
-					*field.IDataType = Float
-				case reflect.Struct:
-					switch field.DataType.ScanType() {
-					case reflect.TypeOf(time.Time{}), reflect.TypeOf(sql.NullTime{}):
-						field.IDataType = new(DataType) //inicializa por é um ponteiro
-						*field.IDataType = DateTime
-					}
-				case reflect.Bool:
-					field.IDataType = new(DataType) //inicializa por é um ponteiro
-					*field.IDataType = Boolean
-				}
-			}
-			field.Order = i + 1
-			field.Index = i
+	var valueColumn []any
+
+	for i := 0; i < len(fields); i++ {
+		var v any
+		valueColumn = append(valueColumn, &v)
+
+		var field *Field
+		if size == 0 {
+			field = ds.Fields.Add(fields[i])
+		} else {
+			field = ds.Fields.FieldByName(fields[i])
 		}
-	} else {
-		for i := 0; i < len(ds.Fields.List); i++ {
-			field := ds.Fields.List[i]
-			field.DataType = fieldTypes[i]
-			if field.IDataType == nil {
-				switch field.DataType.ScanType().Kind() {
-				case reflect.String:
-					field.IDataType = new(DataType) //inicializa por é um ponteiro
-					*field.IDataType = Text
-				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-					field.IDataType = new(DataType) //inicializa por é um ponteiro
-					*field.IDataType = Integer
-				case reflect.Float32, reflect.Float64:
-					field.IDataType = new(DataType) //inicializa por é um ponteiro
-					*field.IDataType = Float
-				case reflect.Struct:
-					if field.DataType.ScanType() == reflect.TypeOf(time.Time{}) {
-						field.IDataType = new(DataType) //inicializa por é um ponteiro
-						*field.IDataType = DateTime
-					}
-				case reflect.Bool:
-					field.IDataType = new(DataType) //inicializa por é um ponteiro
-					*field.IDataType = Boolean
+
+		field.DataType = fieldTypes[i]
+
+		if field.IDataType == nil {
+			switch field.DataType.ScanType().Kind() {
+			case reflect.String:
+				field.IDataType = new(DataType)
+				*field.IDataType = Text
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				field.IDataType = new(DataType)
+				*field.IDataType = Integer
+			case reflect.Float32, reflect.Float64:
+				field.IDataType = new(DataType)
+				*field.IDataType = Float
+			case reflect.Struct:
+				if field.DataType.ScanType() == reflect.TypeOf(time.Time{}) {
+					field.IDataType = new(DataType)
+					*field.IDataType = DateTime
 				}
+			case reflect.Bool:
+				field.IDataType = new(DataType)
+				*field.IDataType = Boolean
 			}
-			field.Order = i + 1
-			field.Index = i
 		}
+		field.Order = i + 1
+		field.Index = i
 	}
 
 	for list.Next() {
-		columns := make([]any, len(fields))
-
-		for i := 0; i < len(columns); i++ {
-			columns[i] = &columns[i]
-		}
-
-		err := list.Scan(columns...)
+		err := list.Scan(valueColumn...)
 
 		if err != nil {
 			print(err)
@@ -649,9 +515,10 @@ func (ds *DataSet) scan(list *sql.Rows) {
 
 		row := NewRow()
 
-		for i := 0; i < len(columns); i++ {
-			row.List[strings.ToUpper(fields[i])] = &Variant{
-				Value: columns[i],
+		for i := 0; i < len(valueColumn); i++ {
+			vc := *valueColumn[i].(*any)
+			row.List[strings.ToUpper(fields[i])] = Variant{
+				Value: vc,
 			}
 		}
 
@@ -697,46 +564,46 @@ func (ds *DataSet) SetMacro(macroName string, macroValue any) *DataSet {
 	return ds
 }
 
-func (ds *DataSet) CreateFields() error {
+//func (ds *DataSet) CreateFields() error {
 
-	//stmt, err := plsqlparser.ParseToConvertMap(ds.GetSql())
-	//
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//for i := 0; i < len(stmt.Fields); i++ {
-	//	_ = ds.Fields.Add(stmt.Fields[i].String())
-	//}
+//stmt, err := plsqlparser.ParseToConvertMap(ds.GetSql())
+//
+//if err != nil {
+//	return err
+//}
+//
+//for i := 0; i < len(stmt.Fields); i++ {
+//	_ = ds.Fields.Add(stmt.Fields[i].String())
+//}
 
-	stmt, err := sqlparser.Parse(ds.GetSql())
-
-	if err != nil {
-		return fmt.Errorf("error when parsing the query %s, error: %w", ds.GetSql(), err)
-	}
-
-	sel, ok := stmt.(*sqlparser.Select)
-	if ok {
-		for _, expr := range sel.SelectExprs {
-			_, ok := expr.(sqlparser.SelectExpr)
-			if ok {
-				alias, ok := expr.(*sqlparser.AliasedExpr)
-				if ok {
-					if !alias.As.IsEmpty() {
-						_ = ds.Fields.Add(alias.As.String())
-					} else {
-						column, ok := alias.Expr.(*sqlparser.ColName)
-						if ok {
-							_ = ds.Fields.Add(column.Name.String())
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return nil
-}
+//stmt, err := sqlparser.Parse(ds.GetSql())
+//
+//if err != nil {
+//	return fmt.Errorf("error when parsing the query %s, error: %w", ds.GetSql(), err)
+//}
+//
+//sel, ok := stmt.(*sqlparser.Select)
+//if ok {
+//	for _, expr := range sel.SelectExprs {
+//		_, ok := expr.(sqlparser.SelectExpr)
+//		if ok {
+//			alias, ok := expr.(*sqlparser.AliasedExpr)
+//			if ok {
+//				if !alias.As.IsEmpty() {
+//					_ = ds.Fields.Add(alias.As.String())
+//				} else {
+//					column, ok := alias.Expr.(*sqlparser.ColName)
+//					if ok {
+//						_ = ds.Fields.Add(column.Name.String())
+//					}
+//				}
+//			}
+//		}
+//	}
+//}
+//
+//return nil
+//}
 
 func (ds *DataSet) Prepare() error {
 	//Params, MacrosUpd, MacrosRead, err := preprocesssql.PreprocessSQL(ds.GetSql(), true, true, true, true, true)
@@ -761,7 +628,7 @@ func (ds *DataSet) FieldByName(fieldName string) *Field {
 
 func (ds *DataSet) Locate(key string, value any) bool {
 	ds.First()
-	for ds.Eof() == false {
+	for !ds.Eof() {
 		switch value.(type) {
 		case string:
 			if ds.FieldByName(key).AsValue() == value {
@@ -1051,9 +918,9 @@ func generateString() string {
 	return result
 }
 
-func (ds *DataSet) ParseSql() (sqlparser.Statement, error) {
-	return sqlparser.Parse(ds.GetSql())
-}
+//func (ds *DataSet) ParseSql() (sqlparser.Statement, error) {
+//	return sqlparser.Parse(ds.GetSql())
+//}
 
 func limitStr(value string, limit int) string {
 	if len(value) > limit {
@@ -1114,7 +981,7 @@ func (ds *DataSet) replaceAllParam(sql string) (newSql string) {
 
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println("error replaceParam", err)
+			fmt.Println("error replaceParam:", err)
 			return
 		}
 	}()
@@ -1135,6 +1002,9 @@ func (ds *DataSet) replaceAllParam(sql string) (newSql string) {
 }
 
 func (ds *DataSet) Free() {
+	ds.Close()
+	ds.Connection = nil
+	ds.Tx = nil
 	ds = nil
 }
 

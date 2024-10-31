@@ -18,6 +18,7 @@ func (s *Strings) Append(value string) *Strings {
 }
 
 func (s *Strings) Clear() *Strings {
+	ClearSlice(s.Items)
 	s.Items = nil
 	return s
 }

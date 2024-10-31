@@ -6,14 +6,14 @@ import (
 	"strings"
 )
 
-type Macro struct {
-	Name  string
-	Value *Variant
-}
-
 type Macros struct {
 	Owner *DataSet
 	List  []*Macro
+}
+
+type Macro struct {
+	Name  string
+	Value *Variant
 }
 
 func NewMacros() *Macros {
@@ -62,6 +62,17 @@ func (m *Macros) SetMacro(macroName string, macroValue any) *Macros {
 		m.List = append(m.List, macro)
 	}
 
+	return m
+}
+
+func (m *Macros) Count() int {
+	return len(m.List)
+}
+
+func (m *Macros) Clear() *Macros {
+	m.Owner = nil
+	ClearSlice(m.List)
+	m.List = nil
 	return m
 }
 

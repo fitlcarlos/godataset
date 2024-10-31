@@ -25,14 +25,28 @@ func (ms *MasterSource) AddMasterFields(fields ...string) *MasterSource {
 	return ms
 }
 
-func (ms *MasterSource) ClearMasterFields() *MasterSource {
-	ms.MasterFields = nil
-	return ms
+func (ms *MasterSource) Clear() {
+	ms.DataSource = nil
+	ms.ClearMasterFields()
+	ms.ClearDetailFields()
 }
 
-func (ms *MasterSource) ClearDetailFields() *MasterSource {
+func (ms *MasterSource) CountMasterFields() int {
+	return len(ms.MasterFields)
+}
+
+func (ms *MasterSource) CountDetailFields() int {
+	return len(ms.DetailFields)
+}
+
+func (ms *MasterSource) ClearMasterFields() {
+	ClearSlice(ms.MasterFields)
+	ms.MasterFields = nil
+}
+
+func (ms *MasterSource) ClearDetailFields() {
+	ClearSlice(ms.DetailFields)
 	ms.DetailFields = nil
-	return ms
 }
 
 func (ms *MasterSource) And() *DataSet {

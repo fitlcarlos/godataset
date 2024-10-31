@@ -59,7 +59,8 @@ func (fd *Fields) Add(fieldName string) *Field {
 }
 
 func (fd *Fields) Clear() *Fields {
-	clear(fd.List)
+	fd.Owner = nil
+	ClearSlice(fd.List)
 	fd.List = nil
 	return fd
 }
