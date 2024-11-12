@@ -1025,7 +1025,7 @@ func replaceParamPG(sql, param string, paramNumber int) (string, int) {
 
 	default:
 		switch string(sql[i+pSize]) {
-		case " ", ",", "(", ")", "=", "|", "[", "]", ":":
+		case " ", ",", "(", ")", "=", "|", "[", "]", ":", "\n", "\r", "\t":
 			ok = true
 		}
 	}
