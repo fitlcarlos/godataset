@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"testing"
-	"time"
 )
 
 func TestGodata(t *testing.T) {
@@ -330,7 +329,7 @@ func TestDataSetPostgres(t *testing.T) {
 
 	t.Log("Sucesso.")
 
-	MemoryLeak()
+	//MemoryLeak()
 
 	connectStr := "postgres://postgres:100651xpto@localhost:5432/erp?sslmode=disable"
 
@@ -347,12 +346,7 @@ func TestDataSetPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for {
-
-		executaTestePostgres(db)
-
-		time.Sleep(1 * time.Second)
-	}
+	executaTestePostgres(db)
 
 	//	AddSql("INSERT INTO PARAMETRO (ID, MODULO, CHAVE, DESCRICAO, TIPO, DADO, USUARIO, PERFIL, EMPRESA)").
 	//	AddSql("VALUES (NEXTVAL('SEQ_PARAM_ID'),").
