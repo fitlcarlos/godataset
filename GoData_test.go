@@ -2,7 +2,11 @@ package godata
 
 import (
 	"fmt"
+	"log"
+	"net/http"
+	"net/http/pprof"
 	"testing"
+	"time"
 )
 
 func TestGodata(t *testing.T) {
@@ -326,10 +330,12 @@ func TestDataSetPostgres(t *testing.T) {
 
 	t.Log("Sucesso.")
 
+	MemoryLeak()
+
 	connectStr := "postgres://postgres:100651xpto@localhost:5432/erp?sslmode=disable"
 
 	db, err := NewConnection(DialectType(POSTGRESQL), connectStr)
-	db.EnableLog()
+	//db.EnableLog()
 
 	if err != nil {
 		t.Fatal(err)
@@ -340,10 +346,14 @@ func TestDataSetPostgres(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//
-	//ds := db.NewDataSet()
-	//
-	//_, err = ds.
+
+	for {
+
+		executaTestePostgres(db)
+
+		time.Sleep(1 * time.Second)
+	}
+
 	//	AddSql("INSERT INTO PARAMETRO (ID, MODULO, CHAVE, DESCRICAO, TIPO, DADO, USUARIO, PERFIL, EMPRESA)").
 	//	AddSql("VALUES (NEXTVAL('SEQ_PARAM_ID'),").
 	//	AddSql("4, 'habilita_politica_senha','Habilita Política de Senha: 0 ou vazio = Não, 1 = Sim', 2, '0',0,0,0").
@@ -359,6 +369,28 @@ func TestDataSetPostgres(t *testing.T) {
 	//
 	//	ds.Next()
 	//}
+}
+
+func executaTestePostgres(con *Conn) {
+	ds := con.NewDataSet()
+
+	defer ds.Free()
+
+	err := ds.
+		AddSql("select id::integer, nome from pessoa where id = :id").
+		SetInputParam("id", 1).
+		Open()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for !ds.Eof() {
+		fmt.Println(ds.FieldByName("id").AsInt64())
+		fmt.Println(ds.FieldByName("nome").AsString())
+
+		ds.Next()
+	}
 }
 
 func TestDataSetParametroNull(t *testing.T) {
@@ -585,4 +617,28 @@ func TestSelectMySql(t *testing.T) {
 		Open()
 
 	fmt.Println(ds.FieldByName("data_inicio_envio").AsDateTime())
+}
+
+func MemoryLeak() {
+	go func() {
+		r := http.NewServeMux()
+		// Define uma rota usando o Gorilla Mux
+		r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			// Escreve uma resposta no corpo da resposta HTTP
+			fmt.Fprintf(w, "Olá! Você acessou: %s\n", r.URL.Path)
+		})
+		r.Handle("/debug/pprof/", http.HandlerFunc(pprof.Index))
+		r.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+		r.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+		r.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+		r.Handle("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
+		r.Handle("/debug/pprof/{cmd}", http.HandlerFunc(pprof.Index)) // special handling for Gorilla mux
+
+		// Inicia o servidor HTTP usando o roteador criado pelo Gorilla Mux
+		fmt.Println("Servidor iniciado em: http://localhost:6060")
+		if err := http.ListenAndServe(":6060", r); err != nil {
+			fmt.Printf("Erro ao iniciar o servidor: %s\n", err)
+		}
+	}()
+	//go tool pprof -alloc_space http://localhost:6060/debug/pprof/heap
 }

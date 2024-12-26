@@ -60,6 +60,11 @@ func (fd *Fields) Add(fieldName string) *Field {
 
 func (fd *Fields) Clear() *Fields {
 	fd.Owner = nil
+
+	for i := 0; i < len(fd.List); i++ {
+		fd.List[i].Owner = nil
+	}
+
 	ClearSlice(fd.List)
 	fd.List = nil
 	return fd

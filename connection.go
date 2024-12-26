@@ -18,11 +18,12 @@ type Conn struct {
 	DB           *sql.DB
 	Dialect      DialectType
 	DSN          string
+	Schema       string
 	log          bool
-	PoolSize     int
-	PoolLifetime time.Duration
-	MaxOpenConns int
-	ConnLifetime time.Duration
+	PoolSize     int           // Máximo de conexões abertas
+	PoolLifetime time.Duration // Tempo máximo ocioso antes de fechar a conexão
+	MaxOpenConns int           // Máximo de conexões ociosas
+	ConnLifetime time.Duration // Tempo máximo de vida de uma conexão
 	connContext  bool
 }
 
@@ -66,7 +67,6 @@ func newConnection(dialect DialectType, dsn string) (*Conn, error) {
 func NewConnectionOracle(dsn string) (*Conn, error) {
 
 	timout := strconv.FormatInt(int64(time.Minute*60), 10)
-
 	return newConnection(ORACLE, dsn+"?connection timeout="+timout+"&lob fetch=post")
 }
 
@@ -156,6 +156,10 @@ func (co *Conn) SetConnLifeTime(d time.Duration) {
 	co.DB.SetConnMaxLifetime(d)
 }
 
+func (co *Conn) SetSchema(s string) {
+	co.Schema = s
+}
+
 func (co *Conn) Ping() error {
 	if err := co.DB.Ping(); err != nil {
 		return fmt.Errorf("database is not reachable: %w", err)
@@ -195,18 +199,7 @@ func (co *Conn) Close() {
 }
 
 func (co *Conn) NewDataSet() *DataSet {
-	ds := &DataSet{
-		Connection:   co,
-		Index:        0,
-		Recno:        0,
-		Fields:       NewFields(),
-		Params:       NewParams(),
-		Macros:       NewMacros(),
-		MasterSource: NewMasterSource(),
-	}
-	ds.Fields.Owner = ds
-
-	return ds
+	return NewDataSet(co)
 }
 
 func GetApplicationName() string {

@@ -179,6 +179,11 @@ func (p *Params) Count() int {
 
 func (p *Params) Clear() *Params {
 	p.Owner = nil
+
+	for i := 0; i < len(p.List); i++ {
+		p.List[i].Owner = nil
+	}
+
 	ClearSlice(p.List)
 	p.List = nil
 	return p

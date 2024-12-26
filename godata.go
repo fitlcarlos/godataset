@@ -7,7 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aoticombr/golang/preprocesssql"
-	//"github.com/blastrain/vitess-sqlparser/sqlparser"
+	"github.com/jackc/pgx/v5"
+	goOra "github.com/sijms/go-ora/v2"
 	"io"
 	"reflect"
 	"strings"
@@ -123,13 +124,13 @@ func (ds *DataSet) Open() error {
 			return err
 		}
 
-		if err = ds.pingDB(); err != nil {
-			return err
-		}
-
-		if rows, err = ds.open(query); err != nil {
-			return err
-		}
+		//if err = ds.pingDB(); err != nil {
+		//	return err
+		//}
+		//
+		//if rows, err = ds.open(query); err != nil {
+		//	return err
+		//}
 	}
 
 	if rows == nil {
@@ -399,6 +400,15 @@ func (ds *DataSet) GetParams() []any {
 		switch dialect {
 		case MYSQL:
 			param = append(param, value)
+		case POSTGRESQL:
+			switch ds.Params.List[i].ParamType {
+			case IN:
+				param = append(param, pgx.NamedArgs{key: value})
+			case OUT:
+				param = append(param, pgx.NamedArgs{key: sql.Out{Dest: value}})
+			case INOUT:
+				param = append(param, pgx.NamedArgs{key: sql.Out{Dest: value, In: true}})
+			}
 		default:
 			switch ds.Params.List[i].ParamType {
 			case IN:
@@ -516,9 +526,8 @@ func (ds *DataSet) scan(list *sql.Rows) {
 		row := NewRow()
 
 		for i := 0; i < len(valueColumn); i++ {
-			vc := *valueColumn[i].(*any)
 			row.List[strings.ToUpper(fields[i])] = Variant{
-				Value: vc,
+				Value: *valueColumn[i].(*any),
 			}
 		}
 
@@ -564,49 +573,7 @@ func (ds *DataSet) SetMacro(macroName string, macroValue any) *DataSet {
 	return ds
 }
 
-//func (ds *DataSet) CreateFields() error {
-
-//stmt, err := plsqlparser.ParseToConvertMap(ds.GetSql())
-//
-//if err != nil {
-//	return err
-//}
-//
-//for i := 0; i < len(stmt.Fields); i++ {
-//	_ = ds.Fields.Add(stmt.Fields[i].String())
-//}
-
-//stmt, err := sqlparser.Parse(ds.GetSql())
-//
-//if err != nil {
-//	return fmt.Errorf("error when parsing the query %s, error: %w", ds.GetSql(), err)
-//}
-//
-//sel, ok := stmt.(*sqlparser.Select)
-//if ok {
-//	for _, expr := range sel.SelectExprs {
-//		_, ok := expr.(sqlparser.SelectExpr)
-//		if ok {
-//			alias, ok := expr.(*sqlparser.AliasedExpr)
-//			if ok {
-//				if !alias.As.IsEmpty() {
-//					_ = ds.Fields.Add(alias.As.String())
-//				} else {
-//					column, ok := alias.Expr.(*sqlparser.ColName)
-//					if ok {
-//						_ = ds.Fields.Add(column.Name.String())
-//					}
-//				}
-//			}
-//		}
-//	}
-//}
-//
-//return nil
-//}
-
 func (ds *DataSet) Prepare() error {
-	//Params, MacrosUpd, MacrosRead, err := preprocesssql.PreprocessSQL(ds.GetSql(), true, true, true, true, true)
 	Params, _, _, err := preprocesssql.PreprocessSQL(ds.GetSql(), true, true, true, true, true)
 	if err != nil {
 		return err
@@ -896,6 +863,11 @@ func (ds *DataSet) ToStructJson(model any) ([]byte, error) {
 func JoinSlice(list any) string {
 	valueOf := reflect.ValueOf(list)
 	value := make([]string, valueOf.Len())
+
+	defer func() {
+		value = value[:0]
+	}()
+
 	for i := 0; i < valueOf.Len(); i++ {
 		if valueOf.Index(i).Type().Kind() == reflect.String {
 			value[i] = "'" + fmt.Sprintf("%v", valueOf.Index(i).Interface()) + "'"
@@ -903,7 +875,10 @@ func JoinSlice(list any) string {
 			value[i] = fmt.Sprintf("%v", valueOf.Index(i).Interface())
 		}
 	}
-	return strings.Join(value, ", ")
+
+	texto := strings.Join(value, ", ")
+
+	return texto
 }
 
 func (ds *DataSet) PrintParam() {
@@ -944,8 +919,10 @@ func (ds *DataSet) SqlParam() string {
 			vsql = strings.ReplaceAll(vsql, ":"+key, fmt.Sprintf("%v", val))
 		case float32, float64:
 			vsql = strings.ReplaceAll(vsql, ":"+key, fmt.Sprintf("%f", val))
-		case string:
+		case string, []byte:
 			vsql = strings.ReplaceAll(vsql, ":"+key, "'"+value.AsString()+"'")
+		case goOra.Clob:
+			vsql = strings.ReplaceAll(vsql, ":"+key, "q'["+value.AsString()+"]'")
 		}
 	}
 	return vsql
@@ -992,17 +969,28 @@ func (ds *DataSet) replaceAllParam(sql string) (newSql string) {
 			param := ":" + ds.Params.List[i].Name
 			newSql, _ = replaceParamMYSQL(newSql, param, i+1)
 		}
-	case POSTGRESQL:
-		for i := 0; i < len(ds.Params.List); i++ {
-			param := ":" + ds.Params.List[i].Name
-			newSql, _ = replaceParamPG(newSql, param, i+1)
-		}
+		//case POSTGRESQL:
+		//	for i := 0; i < len(ds.Params.List); i++ {
+		//		param := ":" + ds.Params.List[i].Name
+		//		newSql, _ = replaceParamPG(newSql, param, i+1)
+		//	}
 	}
 	return
 }
 
 func (ds *DataSet) Free() {
-	ds.Close()
+	ds.Sql.Clear()
+	ds.Index = 0
+	ds.Recno = 0
+	ds.Rows = nil
+	ds.Fields.Clear()
+	ds.Fields = nil
+	ds.Params.Clear()
+	ds.Params = nil
+	ds.Macros.Clear()
+	ds.Macros = nil
+	ds.MasterSource.Clear()
+	ds.MasterSource = nil
 	ds.Connection = nil
 	ds.Tx = nil
 	ds = nil

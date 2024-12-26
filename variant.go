@@ -39,6 +39,8 @@ func (v Variant) AsString() string {
 		value = val
 	case []uint8:
 		value = string([]byte(val))
+	case go_ora.Clob:
+		value = val.String
 	default:
 		t := reflect.TypeOf(v.Value)
 		msg := fmt.Sprintf("unable to convert data type to string. Type: %v", t)
