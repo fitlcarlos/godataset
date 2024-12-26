@@ -1,6 +1,6 @@
 module github.com/fitlcarlos/godata
 
-go 1.22.1
+go 1.23.1
 
 require (
 	github.com/aoticombr/golang v1.0.73
