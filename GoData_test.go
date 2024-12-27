@@ -371,8 +371,10 @@ func executaTestePostgres(con *Conn) {
 	defer ds.Free()
 
 	err := ds.
-		AddSql("select id::integer, nome from pessoa where id = :id").
-		SetInputParam("id", 1).
+		//AddSql("select id::integer, nome from pessoa where id = @id").
+		AddSql("select id::integer, nome from pessoa where id = @id and nome = @nome").
+		SetInputParam("id", int64(1)).
+		SetInputParam("nome", "LUIZ HENRIQUE MAY").
 		Open()
 
 	if err != nil {

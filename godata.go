@@ -385,12 +385,19 @@ func (ds *DataSet) GetSqlMasterDetail() (vsql string) {
 
 func (ds *DataSet) GetParams() []any {
 	var param []any
+	var paramPostgres pgx.NamedArgs
 
 	var dialect DialectType
 	if ds.Tx != nil {
 		dialect = ds.Tx.Conn.Dialect
 	} else {
 		dialect = ds.Connection.Dialect
+	}
+
+	if dialect == POSTGRESQL {
+		if len(ds.Params.List) > 0 {
+			paramPostgres = pgx.NamedArgs{}
+		}
 	}
 
 	for i := 0; i < len(ds.Params.List); i++ {
@@ -403,11 +410,11 @@ func (ds *DataSet) GetParams() []any {
 		case POSTGRESQL:
 			switch ds.Params.List[i].ParamType {
 			case IN:
-				param = append(param, pgx.NamedArgs{key: value})
+				paramPostgres[key] = value
 			case OUT:
-				param = append(param, pgx.NamedArgs{key: sql.Out{Dest: value}})
+				paramPostgres[key] = sql.Out{Dest: value}
 			case INOUT:
-				param = append(param, pgx.NamedArgs{key: sql.Out{Dest: value, In: true}})
+				paramPostgres[key] = sql.Out{Dest: value, In: true}
 			}
 		default:
 			switch ds.Params.List[i].ParamType {
@@ -420,6 +427,13 @@ func (ds *DataSet) GetParams() []any {
 			}
 		}
 	}
+
+	if dialect == POSTGRESQL {
+		if len(paramPostgres) > 0 {
+			param = append(param, paramPostgres)
+		}
+	}
+
 	return param
 }
 
