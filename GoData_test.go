@@ -1,10 +1,15 @@
 package godata
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/tracelog"
 	"log"
 	"net/http"
 	"net/http/pprof"
+	"os"
 	"testing"
 )
 
@@ -325,6 +330,56 @@ func TestDataSetToSInsertTransaction(t *testing.T) {
 	//fmt.Println("commitado com sucesso.")
 }
 
+func TestPgxNativo(t *testing.T) {
+
+	buf := bytes.Buffer{}
+	logger := log.New(&buf, "", 0)
+
+	createAdapterFn := func(logger *log.Logger) tracelog.LoggerFunc {
+		return func(ctx context.Context, level tracelog.LogLevel, msg string, data map[string]interface{}) {
+			logger.Printf("%s data: %s", msg, data)
+		}
+	}
+
+	dsn := "postgres://postgres:100651xpto@localhost:5433/erp?sslmode=disable"
+
+	config, err := pgx.ParseConfig(dsn)
+	config.Tracer = &tracelog.TraceLog{
+		Logger:   createAdapterFn(logger),
+		LogLevel: tracelog.LogLevelDebug,
+	}
+
+	conn, err := pgx.ConnectConfig(context.Background(), config)
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+	defer conn.Close(context.Background())
+
+	var sql = `MERGE INTO MENU M
+				USING (SELECT ID, ID_PARENT, DESCRICAO, COMANDO, TIPO, ICON_CLASS, ORDEM
+				FROM (SELECT @ID::INTEGER AS ID, @ID_PARENT::INTEGER AS ID_PARENT, @DESCRICAO AS DESCRICAO,
+				@COMANDO AS COMANDO, @TIPO::INTEGER AS TIPO, @ICON_CLASS AS ICON_CLASS, @ORDEM::INTEGER AS ORDEM
+				)) A
+				ON M.ID = A.ID
+				WHEN MATCHED THEN
+				UPDATE SET ID_PARENT = A.ID_PARENT, DESCRICAO = A.DESCRICAO, COMANDO = A.COMANDO, TIPO = A.TIPO,
+					ICON_CLASS = A.ICON_CLASS, ORDEM = A.ORDEM, DT_ALT = CURRENT_TIMESTAMP
+				WHEN NOT MATCHED THEN
+				INSERT (ID, ID_PARENT, DESCRICAO, COMANDO, TIPO, ICON_CLASS, ORDEM)
+				VALUES (A.ID, A.ID_PARENT, A.DESCRICAO, A.COMANDO, A.TIPO, A.ICON_CLASS, A.ORDEM)`
+
+	namedArgs := pgx.NamedArgs{"ID": 1, "ID_PARENT": nil, "DESCRICAO": "Cadastro", "COMANDO": nil, "TIPO": 1, "ICON_CLASS": "", "ORDEM": 1}
+
+	_, err = conn.Exec(context.Background(), sql, namedArgs)
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Exec failed: %v\n", err)
+		os.Exit(1)
+	}
+}
+
 func TestDataSetPostgres(t *testing.T) {
 
 	t.Log("Sucesso.")
@@ -372,9 +427,20 @@ func executaTestePostgres(con *Conn) {
 
 	err := ds.
 		//AddSql("select id::integer, nome from pessoa where id = @id").
-		AddSql("select id::integer, nome from pessoa where id = @id and nome = @nome").
-		SetInputParam("id", int64(1)).
-		SetInputParam("nome", "LUIZ HENRIQUE MAY").
+		AddSql("SELECT ID, ID_PARENT, DESCRICAO, COMANDO, TIPO, ICON_CLASS, ORDEM ").
+		AddSql("FROM (SELECT @ID AS ID, @ID_PARENT::INTEGER AS ID_PARENT, @DESCRICAO AS DESCRICAO,").
+		AddSql("             @COMANDO AS COMANDO, @TIPO AS TIPO, @ICON_CLASS AS ICON_CLASS, @ORDEM AS ORDEM").
+		AddSql(") A").
+		SetInputParam("ID", 1).
+		SetInputParam("ID_PARENT", nil).
+		SetInputParam("DESCRICAO", "Cadastro").
+		SetInputParam("COMANDO", nil).
+		SetInputParam("TIPO", 1).
+		SetInputParam("ICON_CLASS", "").
+		SetInputParam("ORDEM", 1).
+		//AddSql("select id::integer, nome from pessoa where id = @id and nome = @nome").
+		//SetInputParam("id", int64(1)).
+		//SetInputParam("nome", "LUIZ HENRIQUE MAY").
 		Open()
 
 	if err != nil {
@@ -382,8 +448,8 @@ func executaTestePostgres(con *Conn) {
 	}
 
 	for !ds.Eof() {
-		fmt.Println(ds.FieldByName("id").AsInt64())
-		fmt.Println(ds.FieldByName("nome").AsString())
+		fmt.Println(ds.FieldByName("ID").AsInt64())
+		fmt.Println(ds.FieldByName("DESCRICAO").AsString())
 
 		ds.Next()
 	}

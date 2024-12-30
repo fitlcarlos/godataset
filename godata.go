@@ -120,9 +120,9 @@ func (ds *DataSet) Open() error {
 
 	rows, err = ds.open(query)
 	if err != nil {
-		if ds.hasTx() {
-			return err
-		}
+		//if ds.hasTx() {
+		return err
+		//}
 
 		//if err = ds.pingDB(); err != nil {
 		//	return err
