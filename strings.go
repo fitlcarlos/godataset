@@ -13,8 +13,7 @@ func New() *Strings {
 }
 
 func (s *Strings) Append(value string) *Strings {
-	s.Items = append(s.Items, value)
-	return s
+	return s.Add(value)
 }
 
 func (s *Strings) Clear() *Strings {
@@ -38,7 +37,7 @@ func (s *Strings) Count() int {
 }
 
 func (s *Strings) Text() string {
-	return strings.Join(s.Items, " \n")
+	return strings.Join(s.Items, "\n")
 }
 
 func (s *Strings) AddStrings(value *Strings) {

@@ -55,109 +55,133 @@ func (p *Params) Add(paramName string) *Param {
 	}
 }
 
-func (p *Params) SetInputParam(paramName string, paramValue any) *Params {
+func (p *Params) SetParam(paramName string, paramValue any, paramType ParamType) *Params {
 
 	param := p.FindParamByName(paramName)
 
-	if param != nil {
-		param.Value.Value = paramValue
-	} else {
-		param = &Param{
-			Name:      paramName,
-			Value:     &Variant{Value: paramValue},
-			ParamType: IN,
+	switch paramType {
+	case IN, INOUT:
+		if param != nil {
+			param.Value.Value = paramValue
+		} else {
+			param = &Param{
+				Name:      paramName,
+				Value:     &Variant{Value: paramValue},
+				ParamType: paramType,
+			}
+			p.List = append(p.List, param)
 		}
-		p.List = append(p.List, param)
+	case OUT:
+		if param != nil {
+			param.Value.Value = paramValue
+		} else {
+			switch paramValue.(type) {
+			case int, int8, int16, int32, int64:
+				value := int64(0)
+				param = &Param{
+					Name:      paramName,
+					Value:     &Variant{Value: &value},
+					ParamType: OUT,
+				}
+			case float32:
+				value := float32(0)
+				param = &Param{
+					Name:      paramName,
+					Value:     &Variant{Value: &value},
+					ParamType: OUT,
+				}
+			case float64:
+				value := float64(0)
+				param = &Param{
+					Name:      paramName,
+					Value:     &Variant{Value: &value},
+					ParamType: OUT,
+				}
+			case string:
+				value := generateString()
+				param = &Param{
+					Name:      paramName,
+					Value:     &Variant{Value: &value},
+					ParamType: OUT,
+				}
+			case bool:
+				value := false
+				param = &Param{
+					Name:      paramName,
+					Value:     &Variant{Value: &value},
+					ParamType: OUT,
+				}
+			case time.Time:
+				value := time.Time{}
+				param = &Param{
+					Name:      paramName,
+					Value:     &Variant{Value: &value},
+					ParamType: OUT,
+				}
+			default:
+				value := float64(0)
+				param = &Param{
+					Name:      paramName,
+					Value:     &Variant{Value: &value},
+					ParamType: OUT,
+				}
+			}
+
+			p.List = append(p.List, param)
+		}
 	}
 
 	return p
+}
+
+func (p *Params) SetParamClob(paramName string, paramValue string, paramType ParamType) *Params {
+	if p.Owner.Connection.Dialect == ORACLE {
+		p.SetParam(paramName, goOra.Clob{String: paramValue, Valid: StrNotEmpty(paramValue)}, paramType)
+	} else if p.Owner.Connection.Dialect == POSTGRESQL {
+		p.SetParam(paramName, []byte(paramValue), paramType)
+	} else {
+		p.SetParam(paramName, paramValue, paramType)
+	}
+	return p
+}
+
+func (p *Params) SetParamBlob(paramName string, paramValue []byte, paramType ParamType) *Params {
+	if p.Owner.Connection.Dialect == ORACLE {
+		p.SetParam(paramName, goOra.Blob{Data: paramValue, Valid: len(paramValue) > 0}, paramType)
+	} else if p.Owner.Connection.Dialect == POSTGRESQL {
+		p.SetParam(paramName, paramValue, paramType)
+	} else {
+		p.SetParam(paramName, paramValue, paramType)
+	}
+	return p
+}
+
+func (p *Params) SetInputParam(paramName string, paramValue any) *Params {
+	return p.SetParam(paramName, paramValue, IN)
 }
 
 func (p *Params) SetInputParamClob(paramName string, paramValue string) *Params {
-	if p.Owner.Connection.Dialect == ORACLE {
-		p.SetInputParam(paramName, goOra.Clob{String: paramValue, Valid: StrNotEmpty(paramValue)})
-	} else if p.Owner.Connection.Dialect == POSTGRESQL {
-		p.SetInputParam(paramName, []byte(paramValue))
-	} else {
-		p.SetInputParam(paramName, paramValue)
-	}
-	return p
+	return p.SetParamClob(paramName, paramValue, IN)
 }
 
 func (p *Params) SetInputParamBlob(paramName string, paramValue []byte) *Params {
-	if p.Owner.Connection.Dialect == ORACLE {
-		p.SetInputParam(paramName, goOra.Blob{Data: paramValue, Valid: len(paramValue) > 0})
-	} else if p.Owner.Connection.Dialect == POSTGRESQL {
-		p.SetInputParam(paramName, paramValue)
-	} else {
-		p.SetInputParam(paramName, paramValue)
-	}
-	return p
+	return p.SetParamBlob(paramName, paramValue, IN)
+}
+
+func (p *Params) SetInOutputParam(paramName string, paramValue any) *Params {
+	return p.SetParam(paramName, paramValue, INOUT)
+}
+
+func (p *Params) SetInOutputParamClob(paramName string, paramValue string) *Params {
+	return p.SetParamClob(paramName, paramValue, INOUT)
+}
+
+func (p *Params) SetInOutputParamBlob(paramName string, paramValue []byte) *Params {
+	return p.SetParamBlob(paramName, paramValue, INOUT)
 }
 
 func (p *Params) SetOutputParam(paramName string, paramValue any) *Params {
-
-	param := p.FindParamByName(paramName)
-
-	if param != nil {
-		param.Value.Value = paramValue
-	} else {
-		switch paramValue.(type) {
-		case int, int8, int16, int32, int64:
-			value := int64(0)
-			param = &Param{
-				Name:      paramName,
-				Value:     &Variant{Value: &value},
-				ParamType: OUT,
-			}
-		case float32:
-			value := float32(0)
-			param = &Param{
-				Name:      paramName,
-				Value:     &Variant{Value: &value},
-				ParamType: OUT,
-			}
-		case float64:
-			value := float64(0)
-			param = &Param{
-				Name:      paramName,
-				Value:     &Variant{Value: &value},
-				ParamType: OUT,
-			}
-		case string:
-			value := generateString()
-			param = &Param{
-				Name:      paramName,
-				Value:     &Variant{Value: &value},
-				ParamType: OUT,
-			}
-		case bool:
-			value := false
-			param = &Param{
-				Name:      paramName,
-				Value:     &Variant{Value: &value},
-				ParamType: OUT,
-			}
-		case time.Time:
-			value := time.Time{}
-			param = &Param{
-				Name:      paramName,
-				Value:     &Variant{Value: &value},
-				ParamType: OUT,
-			}
-		default:
-			value := float64(0)
-			param = &Param{
-				Name:      paramName,
-				Value:     &Variant{Value: &value},
-				ParamType: OUT,
-			}
-		}
-
-		p.List = append(p.List, param)
-	}
-
-	return p
+	return p.SetParam(paramName, paramValue, OUT)
 }
 
 func (p *Params) SetOutputParamSlice(params ...ParamOut) *Params {

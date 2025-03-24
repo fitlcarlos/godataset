@@ -146,6 +146,11 @@ func (ds *DataSet) Open() error {
 
 func (ds *DataSet) open(query string) (*sql.Rows, error) {
 	ds.printLog(query)
+
+	if err := ds.validateConn(); err != nil {
+		return nil, err
+	}
+
 	// Sem contexto
 	if ds.Ctx != nil {
 		if ds.hasTx() {
@@ -164,11 +169,17 @@ func (ds *DataSet) open(query string) (*sql.Rows, error) {
 }
 
 func (ds *DataSet) Close() {
+	if ds == nil {
+		return
+	}
 	ds.Sql.Clear()
 	ds.CloseNoClearSQL()
 }
 
 func (ds *DataSet) CloseNoClearSQL() {
+	if ds == nil {
+		return
+	}
 	ds.Index = 0
 	ds.Recno = 0
 	ds.Rows = nil
@@ -195,6 +206,10 @@ func (ds *DataSet) Exec() (sql.Result, error) {
 	query := ds.GetSql()
 	ds.printLog(query)
 
+	if err := ds.validateConn(); err != nil {
+		return nil, err
+	}
+
 	if ds.Ctx != nil {
 		if ds.hasTx() {
 			return ds.Tx.tx.ExecContext(ds.Ctx, query, ds.GetParams()...)
@@ -215,6 +230,10 @@ func (ds *DataSet) ExecContext(context context.Context) (sql.Result, error) {
 
 	vsql := ds.GetSql()
 	ds.printLog(vsql)
+
+	if err := ds.validateConn(); err != nil {
+		return nil, err
+	}
 
 	if ds.hasTx() {
 		stmt, err = ds.Tx.tx.PrepareContext(context, vsql)
@@ -244,6 +263,10 @@ func (ds *DataSet) ExecBatch(size int) error {
 
 	query := ds.GetSql()
 	ds.printLog(query)
+
+	if err := ds.validateConn(); err != nil {
+		return err
+	}
 
 	if ds.hasTx() {
 		if ds.Ctx != nil {
@@ -324,6 +347,13 @@ func (ds *DataSet) DeleteContext(context context.Context) (int64, error) {
 	}
 
 	return rowsAff, nil
+}
+
+func (ds *DataSet) validateConn() error {
+	if ds.Connection == nil || ds.Connection.DB == nil {
+		return errors.New("database connection error. Connection=nil")
+	}
+	return nil
 }
 
 func (ds *DataSet) GetSql() (sql string) {
@@ -472,6 +502,10 @@ func (ds *DataSet) hasTx() bool {
 }
 
 func (ds *DataSet) pingDB() error {
+	if err := ds.validateConn(); err != nil {
+		return err
+	}
+
 	if err := ds.Connection.DB.Ping(); err != nil {
 		return ds.Connection.Open()
 	}
@@ -506,24 +540,52 @@ func (ds *DataSet) scan(list *sql.Rows) {
 		field.DataType = fieldTypes[i]
 
 		if field.IDataType == nil {
-			switch field.DataType.ScanType().Kind() {
-			case reflect.String:
-				field.IDataType = new(DataType)
-				*field.IDataType = Text
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				field.IDataType = new(DataType)
-				*field.IDataType = Integer
-			case reflect.Float32, reflect.Float64:
-				field.IDataType = new(DataType)
-				*field.IDataType = Float
-			case reflect.Struct:
-				if field.DataType.ScanType() == reflect.TypeOf(time.Time{}) {
+			if ds.Connection.Dialect == ORACLE {
+				switch field.DataType.DatabaseTypeName() {
+				case "LONG":
 					field.IDataType = new(DataType)
-					*field.IDataType = DateTime
+					*field.IDataType = Text
+				default:
+					switch field.DataType.ScanType().Kind() {
+					case reflect.String:
+						field.IDataType = new(DataType)
+						*field.IDataType = Text
+					case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+						field.IDataType = new(DataType)
+						*field.IDataType = Integer
+					case reflect.Float32, reflect.Float64:
+						field.IDataType = new(DataType)
+						*field.IDataType = Float
+					case reflect.Struct:
+						if field.DataType.ScanType() == reflect.TypeOf(time.Time{}) {
+							field.IDataType = new(DataType)
+							*field.IDataType = DateTime
+						}
+					case reflect.Bool:
+						field.IDataType = new(DataType)
+						*field.IDataType = Boolean
+					}
 				}
-			case reflect.Bool:
-				field.IDataType = new(DataType)
-				*field.IDataType = Boolean
+			} else {
+				switch field.DataType.ScanType().Kind() {
+				case reflect.String:
+					field.IDataType = new(DataType)
+					*field.IDataType = Text
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+					field.IDataType = new(DataType)
+					*field.IDataType = Integer
+				case reflect.Float32, reflect.Float64:
+					field.IDataType = new(DataType)
+					*field.IDataType = Float
+				case reflect.Struct:
+					if field.DataType.ScanType() == reflect.TypeOf(time.Time{}) {
+						field.IDataType = new(DataType)
+						*field.IDataType = DateTime
+					}
+				case reflect.Bool:
+					field.IDataType = new(DataType)
+					*field.IDataType = Boolean
+				}
 			}
 		}
 		field.Order = i + 1
@@ -541,7 +603,8 @@ func (ds *DataSet) scan(list *sql.Rows) {
 
 		for i := 0; i < len(valueColumn); i++ {
 			row.List[strings.ToUpper(fields[i])] = Variant{
-				Value: *valueColumn[i].(*any),
+				IDataType: ds.Fields.List[i].IDataType,
+				Value:     *valueColumn[i].(*any),
 			}
 		}
 
@@ -569,6 +632,21 @@ func (ds *DataSet) SetInputParamClob(paramName string, paramValue string) *DataS
 
 func (ds *DataSet) SetInputParamBlob(paramName string, paramValue []byte) *DataSet {
 	ds.Params.SetInputParamBlob(paramName, paramValue)
+	return ds
+}
+
+func (ds *DataSet) SetInOutputParam(paramName string, paramValue any) *DataSet {
+	ds.Params.SetInOutputParam(paramName, paramValue)
+	return ds
+}
+
+func (ds *DataSet) SetInOutputParamClob(paramName string, paramValue string) *DataSet {
+	ds.Params.SetInOutputParamClob(paramName, paramValue)
+	return ds
+}
+
+func (ds *DataSet) SetInOutputParamBlob(paramName string, paramValue []byte) *DataSet {
+	ds.Params.SetInOutputParamBlob(paramName, paramValue)
 	return ds
 }
 
@@ -715,7 +793,7 @@ func (ds *DataSet) ToStruct(model any) error {
 		modelType = modelValue.Type().Elem()
 		modelValue = modelValue.Elem()
 	} else {
-		return fmt.Errorf("the variable " + modelType.Name() + " is not a pointer.")
+		return fmt.Errorf("the variable %s is not a pointer", modelType.Name())
 	}
 
 	switch modelType.Kind() {
@@ -889,10 +967,7 @@ func JoinSlice(list any) string {
 			value[i] = fmt.Sprintf("%v", valueOf.Index(i).Interface())
 		}
 	}
-
-	texto := strings.Join(value, ", ")
-
-	return texto
+	return strings.Join(value, ", ")
 }
 
 func (ds *DataSet) PrintParam() {
@@ -997,14 +1072,27 @@ func (ds *DataSet) Free() {
 	ds.Index = 0
 	ds.Recno = 0
 	ds.Rows = nil
-	ds.Fields.Clear()
-	ds.Fields = nil
-	ds.Params.Clear()
-	ds.Params = nil
-	ds.Macros.Clear()
-	ds.Macros = nil
-	ds.MasterSource.Clear()
-	ds.MasterSource = nil
+
+	if ds.Fields != nil {
+		ds.Fields.Clear()
+		ds.Fields = nil
+	}
+
+	if ds.Params != nil {
+		ds.Params.Clear()
+		ds.Params = nil
+	}
+
+	if ds.Macros != nil {
+		ds.Macros.Clear()
+		ds.Macros = nil
+	}
+
+	if ds.MasterSource != nil {
+		ds.MasterSource.Clear()
+		ds.MasterSource = nil
+	}
+
 	ds.Connection = nil
 	ds.Tx = nil
 	ds = nil

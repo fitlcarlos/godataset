@@ -28,34 +28,36 @@ func (fd *Fields) FindFieldByName(fieldName string) *Field {
 }
 
 func (fd *Fields) FieldByName(fieldName string) *Field {
-	var field *Field
-
 	for i := 0; i < len(fd.List); i++ {
 		if strings.EqualFold(fd.List[i].Name, fieldName) {
-			field = fd.List[i]
-			return field
+			return fd.List[i]
 		}
 	}
 
-	if field == nil {
-		field = &Field{Owner: fd}
 		fmt.Println("Field " + fieldName + " doesn't exists")
+	return &Field{Owner: fd}
 	}
 
-	return field
+func (fd *Fields) Add(fieldName string) (field *Field) {
+	field = NewField(fieldName)
+	field.Owner = fd
+
+	ok := fd.FindFieldByName(fieldName) != nil
+	if ok {
+		field.Name = fmt.Sprintf("%s_%d", fieldName, fd.countRepeated(fieldName))
 }
 
-func (fd *Fields) Add(fieldName string) *Field {
-	field := fd.FindFieldByName(fieldName)
+	fd.List = append(fd.List, field)
+	return
+}
 
-	if field != nil {
-		return field
-	} else {
-		field = NewField(fieldName)
-		field.Owner = fd
-		fd.List = append(fd.List, field)
-		return field
+func (fd *Fields) countRepeated(fieldName string) (counter int) {
+	for i := 0; i < len(fd.List); i++ {
+		if strings.EqualFold(fd.List[i].originalName, fieldName) {
+			counter++
+		}
 	}
+	return
 }
 
 func (fd *Fields) Clear() *Fields {

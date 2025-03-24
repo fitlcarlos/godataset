@@ -50,9 +50,10 @@ func NewConnection(dialect DialectType, dsn string) (*Conn, error) {
 
 func newConnection(dialect DialectType, dsn string) (*Conn, error) {
 	conn := &Conn{
-		Dialect:  dialect,
-		DSN:      dsn,
-		PoolSize: 20,
+		Dialect:      dialect,
+		DSN:          dsn,
+		PoolSize:     20,
+		PoolLifetime: time.Second * 20,
 	}
 
 	err := conn.Open()
@@ -115,6 +116,11 @@ func (co *Conn) Open() error {
 
 	if err != nil {
 		return fmt.Errorf("could not create a connection: %w", err)
+	}
+
+	err = db.Ping()
+	if err != nil {
+		return fmt.Errorf("could not connect: %w", err)
 	}
 
 	db.SetMaxIdleConns(co.PoolSize)
@@ -200,6 +206,15 @@ func (co *Conn) Close() {
 
 func (co *Conn) NewDataSet() *DataSet {
 	return NewDataSet(co)
+}
+
+func (co *Conn) AddOracleSessionParam(key, value string) error {
+	_, err := co.DB.Exec(fmt.Sprintf("alter session set %s=%s", key, value))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func GetApplicationName() string {

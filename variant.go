@@ -11,8 +11,9 @@ import (
 )
 
 type Variant struct {
-	Value  any
-	Silent bool
+	IDataType *DataType
+	Value     any
+	Silent    bool
 }
 
 func (v Variant) SetSilent(value bool) Variant {

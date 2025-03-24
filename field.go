@@ -9,6 +9,7 @@ import (
 type Field struct {
 	Owner      *Fields
 	Name       string
+	originalName string
 	Caption    string
 	DataType   *sql.ColumnType
 	IDataType  *DataType
@@ -30,6 +31,7 @@ type Field struct {
 func NewField(name string) *Field {
 	field := &Field{
 		Name:       name,
+		originalName: name,
 		Caption:    name,
 		Precision:  0,
 		Scale:      0,
