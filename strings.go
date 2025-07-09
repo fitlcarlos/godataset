@@ -1,4 +1,4 @@
-package godata
+package godataset
 
 import (
 	"strings"

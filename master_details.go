@@ -1,4 +1,4 @@
-package godata
+package godataset
 
 type MasterSource struct {
 	DataSource   *DataSet

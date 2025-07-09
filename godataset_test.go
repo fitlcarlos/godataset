@@ -1,4 +1,4 @@
-package godata
+package godataset
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ import (
 	"testing"
 )
 
-func TestGodata(t *testing.T) {
+func TestGodataset(t *testing.T) {
 	connectStr := "oracle://erp:100651xpto@DESKTOP-AU8VNS3:1521/xe"
 
 	db, err := NewConnection(DialectType(ORACLE), connectStr)

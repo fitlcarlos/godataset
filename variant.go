@@ -1,13 +1,14 @@
-package godata
+package godataset
 
 import (
 	"fmt"
-	"github.com/araddon/dateparse"
-	go_ora "github.com/sijms/go-ora/v2"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/araddon/dateparse"
+	go_ora "github.com/sijms/go-ora/v2"
 )
 
 type Variant struct {
@@ -26,23 +27,48 @@ func (v Variant) AsValue() any {
 }
 
 func (v Variant) AsString() string {
-	value := ""
+	if v.Value == nil {
+		return ""
+	}
+
+	// Usar type assertion diretamente em vez de switch type para melhor performance
 	switch val := v.Value.(type) {
-	case nil:
-		value = ""
-	case time.Time:
-		value = val.String()
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		value = fmt.Sprintf("%v", val)
-	case float32, float64:
-		value = fmt.Sprintf("%f", val)
 	case string:
-		value = val
+		return val
+	case time.Time:
+		return val.String()
+	case int:
+		return strconv.Itoa(val)
+	case int8:
+		return strconv.Itoa(int(val))
+	case int16:
+		return strconv.Itoa(int(val))
+	case int32:
+		return strconv.Itoa(int(val))
+	case int64:
+		return strconv.FormatInt(val, 10)
+	case uint:
+		return strconv.FormatUint(uint64(val), 10)
+	case uint8:
+		return strconv.FormatUint(uint64(val), 10)
+	case uint16:
+		return strconv.FormatUint(uint64(val), 10)
+	case uint32:
+		return strconv.FormatUint(uint64(val), 10)
+	case uint64:
+		return strconv.FormatUint(val, 10)
+	case float32:
+		return strconv.FormatFloat(float64(val), 'f', -1, 32)
+	case float64:
+		return strconv.FormatFloat(val, 'f', -1, 64)
 	case []uint8:
-		value = string([]byte(val))
+		return string(val)
 	case go_ora.Clob:
-		value = val.String
+		return val.String
+	case bool:
+		return strconv.FormatBool(val)
 	default:
+		// Fallback para reflection apenas quando necessário
 		t := reflect.TypeOf(v.Value)
 		msg := fmt.Sprintf("unable to convert data type to string. Type: %v", t)
 		if v.Silent {
@@ -50,99 +76,86 @@ func (v Variant) AsString() string {
 		} else {
 			panic(msg)
 		}
-
-		value = ""
+		return ""
 	}
-	//comentado esta cagando no AsByte()
-	//value = strings.Replace(value, "\r", "\n", -1)
-	return value
 }
+
 func (v Variant) AsStringNil() *string {
-	valor := v.AsValue()
-	var tvalor any
-
-	if valor == nil {
-		return nil
-	} else {
-		tvalor = v.AsString()
-		t, ok := tvalor.(string)
-		if ok {
-			return &t
-		}
+	if v.Value == nil {
 		return nil
 	}
+
+	str := v.AsString()
+	return &str
 }
+
 func (v Variant) AsInt() int {
-	switch val := v.Value.(type) {
-	case nil:
-		return 0
-	case int:
-		return v.Value.(int)
-	case int8:
-		return int(v.Value.(int8))
-	case int16:
-		return int(v.Value.(int16))
-	case int32:
-		return int(v.Value.(int32))
-	case int64:
-		return int(v.Value.(int64))
-	case uint:
-		return int(v.Value.(uint))
-	case uint8:
-		return int(v.Value.(uint8))
-	case uint16:
-		return int(v.Value.(uint16))
-	case uint32:
-		return int(v.Value.(uint32))
-	case uint64:
-		return int(v.Value.(uint64))
-	case string:
-		intValue, err := strconv.Atoi(val)
-		if err != nil {
-			t := reflect.TypeOf(val)
-			msg := fmt.Sprintf("unable to convert data type to int. Type: %v", t)
-			if v.Silent {
-				fmt.Println(msg)
-			} else {
-				panic(msg)
-			}
-			return 0
-		}
-		return intValue
-	default:
-		t := reflect.TypeOf(val)
-		msg := fmt.Sprintf("unable to convert data type to int. Type: %v", t)
-		if v.Silent {
-			fmt.Println(msg)
-		} else {
-			panic(msg)
-		}
+	if v.Value == nil {
 		return 0
 	}
-}
-func (v Variant) AsIntNil() *int {
-	valor := v.AsValue()
-	var tvalor any
 
-	if valor == nil {
-		return nil
-	} else {
-		tvalor = v.AsInt()
-		t, ok := tvalor.(int)
-		if ok {
-			return &t
+	// Usar type assertion diretamente para melhor performance
+	switch val := v.Value.(type) {
+	case int:
+		return val
+	case int8:
+		return int(val)
+	case int16:
+		return int(val)
+	case int32:
+		return int(val)
+	case int64:
+		return int(val)
+	case uint:
+		return int(val)
+	case uint8:
+		return int(val)
+	case uint16:
+		return int(val)
+	case uint32:
+		return int(val)
+	case uint64:
+		return int(val)
+	case float32:
+		return int(val)
+	case float64:
+		return int(val)
+	case string:
+		if intValue, err := strconv.Atoi(val); err == nil {
+			return intValue
 		}
-		return nil
+		v.logError("unable to convert string to int", val)
+		return 0
+	case bool:
+		if val {
+			return 1
+		}
+		return 0
+	default:
+		v.logError("unable to convert data type to int", val)
+		return 0
 	}
 }
+
+func (v Variant) AsIntNil() *int {
+	if v.Value == nil {
+		return nil
+	}
+
+	intVal := v.AsInt()
+	return &intVal
+}
+
 func (v Variant) AsInt8() int8 {
+	if v.Value == nil {
+		return 0
+	}
+
 	switch val := v.Value.(type) {
-	case nil:
-		return int8(0)
-	case int:
-		return int8(val)
 	case int8:
 		return val
+	case int:
+		return int8(val)
 	case int16:
 		return int8(val)
 	case int32:
@@ -159,45 +172,36 @@ func (v Variant) AsInt8() int8 {
 		return int8(val)
 	case uint64:
 		return int8(val)
+	case float32:
+		return int8(val)
+	case float64:
+		return int8(val)
 	case string:
-		int8Value, err := strconv.ParseInt(val, 10, 8)
-		if err != nil {
-			t := reflect.TypeOf(val)
-			msg := fmt.Sprintf("unable to convert data type to int8. Type: %v", t)
-			if v.Silent {
-				fmt.Println(msg)
-			} else {
-				panic(msg)
-			}
-			return int8(0)
+		if int8Value, err := strconv.ParseInt(val, 10, 8); err == nil {
+			return int8(int8Value)
 		}
-		return int8(int8Value)
+		v.logError("unable to convert string to int8", val)
+		return 0
+	case bool:
+		if val {
+			return 1
+		}
+		return 0
 	default:
-		t := reflect.TypeOf(val)
-		msg := fmt.Sprintf("unable to convert data type to int8. Type: %v", t)
-		if v.Silent {
-			fmt.Println(msg)
-		} else {
-			panic(msg)
-		}
-		return int8(0)
+		v.logError("unable to convert data type to int8", val)
+		return 0
 	}
 }
-func (v Variant) AsInt8Nil() *int8 {
-	valor := v.AsValue()
-	var tvalor any
 
-	if valor == nil {
-		return nil
-	} else {
-		tvalor = v.AsInt8()
-		t, ok := tvalor.(int8)
-		if ok {
-			return &t
-		}
+func (v Variant) AsInt8Nil() *int8 {
+	if v.Value == nil {
 		return nil
 	}
+
+	int8Val := v.AsInt8()
+	return &int8Val
 }
+
 func (v Variant) AsInt16() int16 {
 	switch val := v.Value.(type) {
 	case nil:
@@ -688,4 +692,15 @@ func (v Variant) IsNotNull() bool {
 func IsPointer(value interface{}) bool {
 	t := reflect.TypeOf(value)
 	return t.Kind() == reflect.Ptr
+}
+
+// Método helper para logging de erros
+func (v Variant) logError(message string, value any) {
+	t := reflect.TypeOf(value)
+	msg := fmt.Sprintf("%s. Type: %v", message, t)
+	if v.Silent {
+		fmt.Println(msg)
+	} else {
+		panic(msg)
+	}
 }

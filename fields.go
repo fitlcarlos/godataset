@@ -1,4 +1,4 @@
-package godata
+package godataset
 
 import (
 	"fmt"
@@ -34,9 +34,9 @@ func (fd *Fields) FieldByName(fieldName string) *Field {
 		}
 	}
 
-		fmt.Println("Field " + fieldName + " doesn't exists")
+	fmt.Println("Field " + fieldName + " doesn't exists")
 	return &Field{Owner: fd}
-	}
+}
 
 func (fd *Fields) Add(fieldName string) (field *Field) {
 	field = NewField(fieldName)
@@ -45,7 +45,7 @@ func (fd *Fields) Add(fieldName string) (field *Field) {
 	ok := fd.FindFieldByName(fieldName) != nil
 	if ok {
 		field.Name = fmt.Sprintf("%s_%d", fieldName, fd.countRepeated(fieldName))
-}
+	}
 
 	fd.List = append(fd.List, field)
 	return

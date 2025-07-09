@@ -1,4 +1,4 @@
-package godata
+package godataset
 
 type Row struct {
 	List map[string]Variant

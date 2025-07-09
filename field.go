@@ -1,4 +1,4 @@
-package godata
+package godataset
 
 import (
 	"database/sql"
@@ -7,45 +7,45 @@ import (
 )
 
 type Field struct {
-	Owner      *Fields
-	Name       string
+	Owner        *Fields
+	Name         string
 	originalName string
-	Caption    string
-	DataType   *sql.ColumnType
-	IDataType  *DataType
-	Precision  int64
-	Scale      int64
-	DataMask   string
-	BoolValue  bool
-	TrueValue  string
-	FalseValue string
-	Visible    bool
-	AcceptNull bool
-	QuoteNull  bool
-	OmitNull   bool
-	StrNull    string
-	Order      int
-	Index      int
+	Caption      string
+	DataType     *sql.ColumnType
+	IDataType    *DataType
+	Precision    int64
+	Scale        int64
+	DataMask     string
+	BoolValue    bool
+	TrueValue    string
+	FalseValue   string
+	Visible      bool
+	AcceptNull   bool
+	QuoteNull    bool
+	OmitNull     bool
+	StrNull      string
+	Order        int
+	Index        int
 }
 
 func NewField(name string) *Field {
 	field := &Field{
-		Name:       name,
+		Name:         name,
 		originalName: name,
-		Caption:    name,
-		Precision:  0,
-		Scale:      0,
-		DataMask:   "",
-		BoolValue:  false,
-		TrueValue:  "",
-		FalseValue: "",
-		Visible:    true,
-		AcceptNull: true,
-		QuoteNull:  true,
-		OmitNull:   false,
-		StrNull:    "null",
-		Order:      1,
-		Index:      0,
+		Caption:      name,
+		Precision:    0,
+		Scale:        0,
+		DataMask:     "",
+		BoolValue:    false,
+		TrueValue:    "",
+		FalseValue:   "",
+		Visible:      true,
+		AcceptNull:   true,
+		QuoteNull:    true,
+		OmitNull:     false,
+		StrNull:      "null",
+		Order:        1,
+		Index:        0,
 	}
 
 	return field

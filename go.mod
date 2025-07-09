@@ -1,4 +1,4 @@
-module github.com/fitlcarlos/godata
+module github.com/fitlcarlos/godataset
 
 go 1.23.1
 
