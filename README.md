@@ -1,86 +1,90 @@
-# godataset
+# GoDataset
 
-GoDataset is a library that facilitates interaction with a database and manipulation of data through a dataset.
+Biblioteca Go para facilitar a interação com bancos de dados e manipulação de dados via dataset, inspirada em conceitos de datasets de outras linguagens, mas com a simplicidade e performance do Go.
 
-A dataset consists of a series of records, each containing any number of fields and a pointer to the current record. The dataset may have a direct, one-to-one correspondence with a physical table, or, as a result of a query, it may be a subset of a table or a join of several tables.
+## Sumário
+- [Descrição](#descrição)
+- [Instalação](#instalação)
+- [Exemplo de Uso](#exemplo-de-uso)
+- [Principais Métodos](#principais-métodos)
+- [Contribuição](#contribuição)
+- [Referências](#referências)
+- [Licença](#licença)
+- [Autor](#autor)
 
-Example of use:
+## Descrição
+O GoDataset abstrai operações comuns de manipulação de dados, permitindo trabalhar com registros, campos e navegação de forma eficiente. Ideal para aplicações que precisam de flexibilidade e produtividade ao lidar com diferentes bancos de dados.
 
-    connectStr := "oracle://erp:pass123@DESKTOP-DEV:1521/xe"
+## Instalação
 
-	db, err := NewConnection(DialectType(ORACLE), connectStr)
+Requer Go 1.18 ou superior.
 
-	if err != nil {
-		t.Fatal(err)
-	}
+```bash
+go get github.com/seuusuario/godataset
+```
 
-	defer db.Close()
+## Exemplo de Uso
+```go
+connectStr := "oracle://erp:pass123@DESKTOP-DEV:1521/xe"
 
-	ds := NewDataSet(db)
-	err = ds.
-		AddSql("SELECT ID, NAME FROM PEOPLE").
-		AddSql("WHERE ID BETWEEN :idStart AND :idEnd").
-		SetInputParam("idStart", 20).
-		SetInputParam("idEnd", 100).
-		Open()
+db, err := NewConnection(DialectType(ORACLE), connectStr)
+if err != nil {
+    log.Fatal(err)
+}
+defer db.Close()
 
-	if err != nil {
-		t.Fatal(err)
-	}
+ds := NewDataSet(db)
+err = ds.
+    AddSql("SELECT ID, NAME FROM PEOPLE").
+    AddSql("WHERE ID BETWEEN :idStart AND :idEnd").
+    SetInputParam("idStart", 20).
+    SetInputParam("idEnd", 100).
+    Open()
+if err != nil {
+    log.Fatal(err)
+}
 
-    fmt.Println(ds.Count())
+fmt.Println(ds.Count())
+ds.First()
+for !ds.Eof() {
+    fmt.Println(ds.FieldByName("NAME").AsString())
+    ds.Next()
+}
+```
 
-	ds.First()
-	for !ds.Eof() {
-		t.Log(ds.FieldByName("NAME").AsString())
-		ds.Next()
-	}
+## Principais Métodos
 
-    All DataSet methods
-    
-    func NewDataSet(db *Conn) *DataSet
-    func NewDataSetTx(tx *Transaction) *DataSet
-    func (ds *DataSet) AddContext(ctx context.Context) *DataSet
-    func (ds *DataSet) Open() error
-    func (ds *DataSet) OpenContext(context context.Context) error
-    func (ds *DataSet) Close()
-    func (ds *DataSet) Exec() (sql.Result, error)
-    func (ds *DataSet) ExecContext(context context.Context) (sql.Result, error)
-    func (ds *DataSet) Delete() (int64, error)
-    func (ds *DataSet) DeleteContext(context context.Context) (int64, error)
-    func (ds *DataSet) GetSql() (sql string)
-    func (ds *DataSet) GetSqlMasterDetail() (vsql string)
-    func (ds *DataSet) GetParams() []any
-    func (ds *DataSet) GetMacros() []any
-    func (ds *DataSet) ParamByName(paramName string) *Param
-    func (ds *DataSet) MacroByName(macroName string) *Macro
-    func (ds *DataSet) SetInputParam(paramName string, paramValue any) *DataSet
-    func (ds *DataSet) SetInputParamClob(paramName string, paramValue string) *DataSet
-    func (ds *DataSet) SetInputParamBlob(paramName string, paramValue []byte) *DataSet
-    func (ds *DataSet) SetOutputParam(paramName string, paramValue any) *DataSet
-    func (ds *DataSet) SetMacro(macroName string, macroValue any) *DataSet
-    func (ds *DataSet) CreateFields() error
-    func (ds *DataSet) Prepare()
-    func (ds *DataSet) FieldByName(fieldName string) *Field
-    func (ds *DataSet) Locate(key string, value any) bool
-    func (ds *DataSet) First()
-    func (ds *DataSet) Next()
-    func (ds *DataSet) Previous()
-    func (ds *DataSet) Last()
-    func (ds *DataSet) Bof() bool
-    func (ds *DataSet) Eof() bool
-    func (ds *DataSet) IsEmpty() bool
-    func (ds *DataSet) IsNotEmpty() bool
-    func (ds *DataSet) Count() int
-    func (ds *DataSet) AddSql(sql string) *DataSet
-    func (ds *DataSet) AddMasterSource(dataSet *DataSet) *DataSet 
-    func (ds *DataSet) AddDetailFields(fields ...string) *DataSet
-    func (ds *DataSet) AddMasterFields(fields ...string) *DataSet
-    func (ds *DataSet) ClearDetailFields() *DataSet 
-    func (ds *DataSet) ClearMasterFields() *DataSet
-    func (ds *DataSet) ToStruct(model any) error 
-    func (ds *DataSet) toStructUniqResult(modelValue reflect.Value) error
-    func (ds *DataSet) GetValue(field *Field, fieldType any) any
-    func (ds *DataSet) PrintParam()
-    func (ds *DataSet) ParseSql() (sqlparser.Statement, error)
-    func (ds *DataSet) SqlParam() string
+- `NewDataSet(db *Conn) *DataSet`
+- `NewDataSetTx(tx *Transaction) *DataSet`
+- `(*DataSet) AddSql(sql string) *DataSet`
+- `(*DataSet) SetInputParam(paramName string, paramValue any) *DataSet`
+- `(*DataSet) Open() error`
+- `(*DataSet) Exec() (sql.Result, error)`
+- `(*DataSet) FieldByName(fieldName string) *Field`
+- `(*DataSet) First()`, `Next()`, `Previous()`, `Last()`
+- `(*DataSet) Eof() bool`, `Bof() bool`, `IsEmpty() bool`, `Count() int`
+- `(*DataSet) ToStruct(model any) error`
+
+Veja a documentação completa no código-fonte para todos os métodos disponíveis.
+
+## Contribuição
+Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou pull requests.
+
+1. Fork este repositório
+2. Crie uma branch para sua feature (`git checkout -b feature/nome-feature`)
+3. Commit suas alterações (`git commit -am 'Adiciona nova feature'`)
+4. Push para a branch (`git push origin feature/nome-feature`)
+5. Abra um Pull Request
+
+## Referências
+[![Go Reference](https://pkg.go.dev/badge/github.com/fitlcarlos/godataset.svg)](https://pkg.go.dev/github.com/fitlcarlos/godataset)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+## Licença
+Este projeto está licenciado sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## Autor
+Carlos Fitl
+
+---
+Sinta-se à vontade para sugerir melhorias ou reportar problemas!
