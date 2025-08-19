@@ -1,6 +1,6 @@
 # GoDataset
 
-Biblioteca Go para facilitar a interação com bancos de dados e manipulação de dados via dataset, inspirada em conceitos de datasets de outras linguagens, mas com a simplicidade e performance do Go.
+GODataset - Biblioteca Go para facilitar a interação com bancos de dados e manipulação de dados via dataset, inspirada em conceitos de datasets de outras linguagens, mas com a simplicidade e performance do Go.
 
 ## Sumário
 - [Descrição](#descrição)
