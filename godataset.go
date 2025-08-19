@@ -17,29 +17,6 @@ import (
 	"unsafe"
 )
 
-type DS interface {
-	NewDataSet(db *Conn) *DataSet
-	Open() error
-	Close()
-	Exec() (sql.Result, error)
-	GetSql() (sql string)
-	GetParams() []any
-	Scan(list *sql.Rows)
-	ParamByName(paramName string) Param
-	SetInputParam(paramName string, paramValue any) *DataSet
-	SetOutputParam(paramName string, paramType any) *DataSet
-	FieldByName(fieldName string) Field
-	Locate(key string, value any) bool
-	First()
-	Next()
-	Eof() bool
-	IsEmpty() bool
-	IsNotEmpty() bool
-	Count() int
-	AddSql(sql string) *DataSet
-	ToStruct(model any) error
-}
-
 type DataSet struct {
 	Connection      *Conn
 	Tx              *Transaction
